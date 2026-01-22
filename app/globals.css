@@ -5,16 +5,22 @@
   --foreground: #171717;
 }
 
+/* Tailwind v4 theme tokens */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  /* 4 Seasons brand colors */
+  --color-brand-blue: #1ea7e1;
+  --color-brand-blueDark: #168fc2;
+  --color-brand-dark: #0f1115;
+  --color-brand-panel: #ffffff;
+  --color-brand-muted: #9ca3af;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #0055ff;
     --foreground: #ededed;
   }
 }
@@ -23,4 +29,63 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ---------- Reusable UI styles ---------- */
+
+/* Page shell */
+.ui-page {
+  @apply space-y-6;
+}
+
+.ui-title {
+  @apply text-2xl font-semibold;
+}
+
+.ui-subtitle {
+  @apply text-sm text-brand-muted;
+}
+
+/* Cards */
+.ui-card {
+  @apply rounded-xl bg-brand-panel text-black shadow-sm border border-black/5;
+}
+
+.ui-card-pad {
+  @apply p-4;
+}
+
+/* Inputs */
+.ui-input {
+  @apply w-full rounded-lg px-4 py-3 text-black placeholder:text-gray-400
+    border border-brand-blue/30
+    focus:outline-none focus:ring-2 focus:ring-brand-blue;
+}
+
+.ui-select {
+  @apply w-full rounded-lg px-4 py-3 text-black
+    border border-brand-blue/30
+    focus:outline-none focus:ring-2 focus:ring-brand-blue;
+}
+
+/* Buttons */
+.ui-btn {
+  @apply rounded-lg px-4 py-2 font-medium transition;
+}
+
+.ui-btn-primary {
+  @apply bg-brand-blue text-white hover:bg-brand-blueDark;
+}
+
+.ui-btn-block {
+  @apply w-full;
+}
+
+/* Lists */
+.ui-item {
+  @apply border rounded-lg p-3 hover:bg-gray-50;
+}
+
+.ui-muted {
+  @apply text-sm text-gray-600;
 }
