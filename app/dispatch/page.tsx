@@ -385,7 +385,7 @@ export default function DispatchPage() {
                   <React.Fragment key={t.id}>
                     <div className="ui-item bg-white">
                       <div className="font-medium">{t.name}</div>
-                      <div className="text-xs text-gray-500">{t.status}</div>
+                      {/*<div className="text-xs text-gray-500">{t.status}</div>*/}
                     </div>
 
                     {days.map((d) => {

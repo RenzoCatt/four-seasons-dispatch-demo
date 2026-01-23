@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import TopSearch from "../components/TopSearch";
+import { Technician } from "@/lib/store";
 
 type Customer = { id: string; name: string; phone: string; address: string; notes?: string };
 
@@ -39,6 +40,7 @@ export default function WorkOrdersPage() {
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [techs, setTechs] = useState<any[]>([]);
 
   // NEW: locations for selected customer
   const [locations, setLocations] = useState<Location[]>([]);
@@ -58,13 +60,20 @@ export default function WorkOrdersPage() {
     [customers]
   );
 
+  const techsById = useMemo(
+    () => Object.fromEntries(techs.map((t) => [t.id, t])),
+    [techs]
+  );
+
   async function refresh() {
-    const [c, w] = await Promise.all([
+    const [c, w, t] = await Promise.all([
       fetch("/api/customers").then((r) => r.json()),
       fetch("/api/work-orders").then((r) => r.json()),
+      fetch("/api/techs").then((r) => r.json()),
     ]);
     setCustomers(c);
     setWorkOrders(w);
+    setTechs(t);
 
     // default customer
     if (!customerId && c?.[0]?.id) setCustomerId(c[0].id);
@@ -284,13 +293,21 @@ export default function WorkOrdersPage() {
 
       {/* Status columns (no Complete column for now) */}
       <div className="grid lg:grid-cols-2 gap-4">
-        <StatusColumn title="New" items={newJobs} customersById={customersById} onMarkComplete={markComplete} />
-        <StatusColumn
-          title="Assigned"
-          items={assignedJobs}
-          customersById={customersById}
-          onMarkComplete={markComplete}
-        />
+<StatusColumn
+  title="New"
+  items={newJobs}
+  customersById={customersById}
+  techsById={techsById}
+  onMarkComplete={markComplete}
+/>
+
+<StatusColumn
+  title="Assigned"
+  items={assignedJobs}
+  customersById={customersById}
+  techsById={techsById}
+  onMarkComplete={markComplete}
+/>
       </div>
     </div>
   );
@@ -300,11 +317,13 @@ function StatusColumn({
   title,
   items,
   customersById,
+  techsById,
   onMarkComplete,
 }: {
   title: "New" | "Assigned";
   items: WorkOrder[];
   customersById: Record<string, Customer>;
+  techsById: Record<string, Technician>;
   onMarkComplete: (id: string) => void;
 }) {
   return (
@@ -317,6 +336,7 @@ function StatusColumn({
       <div className="space-y-2">
         {items.map((w) => {
           const c = customersById[w.customerId];
+          const t = w.assignedTechId ? techsById[w.assignedTechId] : null;
 
           return (
             <div key={w.id} className="ui-item">
@@ -326,7 +346,15 @@ function StatusColumn({
 
               <div className="ui-muted">{w.description}</div>
 
-              <div className="text-xs text-gray-500 mt-2">Unassigned</div>
+              <div className="text-xs text-gray-500 mt-2">
+                {t ? (
+                  <>
+                    Tech: <span className="font-medium">{t.name}</span>
+                  </>
+                ) : (
+                  "Unassigned"
+                )}
+              </div>
 
               <button
                 type="button"
