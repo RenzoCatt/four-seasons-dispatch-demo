@@ -10,7 +10,6 @@ export default function CustomerNav({ customerId }: { customerId: string }) {
     { label: "Customer", href: `/customers/${customerId}` },
     { label: "Locations", href: `/customers/${customerId}/locations` },
     { label: "New Work Order", href: `/customers/${customerId}/work-orders/new` },
-    { label: "Edit", href: `/customers/${customerId}/edit` },
   ];
 
   const active = (href: string) => pathname === href;

@@ -25,9 +25,13 @@ export function findCustomer(id: string) {
   return customers.find((c) => c.id === id) ?? null;
 }
 
-export function updateCustomer(id: string, patch: Partial<Omit<Customer, "id">>) {
+export function updateCustomer(
+  id: string,
+  patch: Partial<Omit<Customer, "id">>
+) {
   const idx = customers.findIndex((c) => c.id === id);
   if (idx === -1) return null;
   customers[idx] = { ...customers[idx], ...patch };
   return customers[idx];
 }
+

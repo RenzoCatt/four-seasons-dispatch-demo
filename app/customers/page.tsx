@@ -21,14 +21,31 @@ export default function CustomersListPage() {
 
   const [customers, setCustomers] = useState<Customer[]>([]);
 
-  async function refresh() {
-    const data = await fetch("/api/customers").then((r) => r.json());
-    setCustomers(data);
+async function refresh() {
+  const res = await fetch("/api/customers", { cache: "no-store" });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`API ${res.status}: ${text || res.statusText}`);
   }
 
-  useEffect(() => {
-    refresh();
-  }, []);
+  // if server accidentally returns empty body
+  const raw = await res.text();
+  if (!raw) throw new Error("API returned empty response body");
+
+  const data = JSON.parse(raw);
+  setCustomers(data);
+}
+
+useEffect(() => {
+  (async () => {
+    try {
+      await refresh();
+    } catch (e) {
+      console.error(e);
+    }
+  })();
+}, []);
 
   const filteredCustomers = useMemo(() => {
     return customers.filter((c) => {
