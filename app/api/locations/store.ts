@@ -26,3 +26,13 @@ export function getLocationsByCustomer(customerId: string) {
 export function findLocation(id: string) {
   return locations.find((l) => l.id === id) ?? null;
 }
+
+export function updateLocation(
+  id: string,
+  patch: Partial<Omit<Location, "id" | "customerId">>
+) {
+  const idx = locations.findIndex((l) => l.id === id);
+  if (idx === -1) return null;
+  locations[idx] = { ...locations[idx], ...patch };
+  return locations[idx];
+}

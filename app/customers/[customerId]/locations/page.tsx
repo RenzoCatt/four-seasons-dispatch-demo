@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import CustomerNav from "../../components/CustomerNav";
 
@@ -14,7 +14,9 @@ type Location = {
 };
 
 export default function CustomerLocationsPage() {
-  const { id: customerId } = useParams<{ id: string }>();
+  // IMPORTANT: folder is [customerId], so params key is customerId
+  const { customerId } = useParams<{ customerId: string }>();
+  const router = useRouter();
 
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,7 +90,10 @@ export default function CustomerLocationsPage() {
     }
   }
 
-  const countLabel = useMemo(() => `Service Locations (${locations.length})`, [locations.length]);
+  const countLabel = useMemo(
+    () => `Service Locations (${locations.length})`,
+    [locations.length]
+  );
 
   return (
     <div className="ui-page">
@@ -96,7 +101,8 @@ export default function CustomerLocationsPage() {
         <div className="space-y-2">
           <h1 className="ui-title">Service Locations</h1>
           <p className="ui-subtitle">
-            Locations for this customer. Work orders should be created from a location.
+            Locations for this customer. Work orders should be created from a
+            location.
           </p>
         </div>
 
@@ -142,7 +148,10 @@ export default function CustomerLocationsPage() {
             onChange={(e) => setNotes(e.target.value)}
           />
 
-          <button className="ui-btn ui-btn-primary ui-btn-block" disabled={saving}>
+          <button
+            className="ui-btn ui-btn-primary ui-btn-block"
+            disabled={saving}
+          >
             {saving ? "Saving..." : "Save Location"}
           </button>
         </form>
@@ -158,34 +167,52 @@ export default function CustomerLocationsPage() {
           ) : (
             <div className="space-y-3">
               {locations.map((loc) => (
-                <div key={loc.id} className="ui-item">
+                <div
+                  key={loc.id}
+                  className="ui-item hover:opacity-90 transition cursor-pointer"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() =>
+                    router.push(`/customers/${customerId}/locations/${loc.id}`)
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(
+                        `/customers/${customerId}/locations/${loc.id}`
+                      );
+                    }
+                  }}
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <div className="font-medium">{loc.name}</div>
-                      <div className="text-sm text-gray-600">{loc.address}</div>
+                      <div className="text-sm text-gray-600">
+                        {loc.address}
+                      </div>
                       {loc.notes && (
-                        <div className="text-xs text-gray-500 mt-1">{loc.notes}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {loc.notes}
+                        </div>
                       )}
+                      <div className="text-xs text-gray-400 mt-2">
+                        Location ID: {loc.id}
+                      </div>
                     </div>
 
-                    {/* placeholder actions */}
-                    <div className="flex gap-2">
+                    {/* action buttons (NOT nested in a Link) */}
+                    <div
+                      className="flex gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Link
                         href={`/locations/${loc.id}/work-orders/new`}
                         className="ui-btn ui-btn-primary"
                       >
                         Create Work Order
                       </Link>
-                      <Link
-                        href={`/locations/${loc.id}`}
-                        className="ui-btn"
-                      >
-                        View
-                      </Link>
                     </div>
                   </div>
-
-                  <div className="text-xs text-gray-400 mt-2">Location ID: {loc.id}</div>
                 </div>
               ))}
             </div>

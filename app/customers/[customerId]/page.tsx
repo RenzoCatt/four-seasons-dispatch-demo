@@ -13,7 +13,7 @@ type Customer = {
 };
 
 export default function CustomerAccountInfoPage() {
-  const { id } = useParams<{ id: string }>();
+  const { customerId } = useParams<{ customerId: string }>();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -29,7 +29,7 @@ export default function CustomerAccountInfoPage() {
   const [notes, setNotes] = useState("");
 
   async function load() {
-    const res = await fetch(`/api/customers/${id}`, { cache: "no-store" });
+    const res = await fetch(`/api/customers/${customerId}`, { cache: "no-store" });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       throw new Error(`API ${res.status}: ${text || res.statusText}`);
@@ -61,14 +61,14 @@ export default function CustomerAccountInfoPage() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [customerId]);
 
   async function save(closeAfter: boolean) {
     setSaving(true);
     setError("");
 
     try {
-      const res = await fetch(`/api/customers/${id}`, {
+      const res = await fetch(`/api/customers/${customerId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, phone, address, notes }),
@@ -132,7 +132,7 @@ export default function CustomerAccountInfoPage() {
         </div>
       </div>
 
-      <CustomerNav customerId={id} />
+      <CustomerNav customerId={customerId} />
 
       {error && (
         <div className="mt-4 ui-card ui-card-pad">

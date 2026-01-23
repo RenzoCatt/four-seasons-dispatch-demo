@@ -7,9 +7,8 @@ export default function CustomerNav({ customerId }: { customerId: string }) {
   const pathname = usePathname();
 
   const items = [
-    { label: "Customer", href: `/customers/${customerId}` },
-    { label: "Locations", href: `/customers/${customerId}/locations` },
-    { label: "New Work Order", href: `/customers/${customerId}/work-orders/new` },
+    { label: "Account Info", href: `/customers/${customerId}` },
+    { label: "Service Locations", href: `/customers/${customerId}/locations` },
   ];
 
   const active = (href: string) => pathname === href;
