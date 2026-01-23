@@ -71,6 +71,9 @@ body {
 /* Buttons */
 .ui-btn {
   @apply rounded-lg px-4 py-2 font-medium transition;
+  .ui-btn-secondary {
+  @apply bg-gray-100 text-black hover:bg-gray-200;
+}
 }
 
 .ui-btn-primary {
