@@ -3,9 +3,12 @@ import { findCustomer } from "../store";
 
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const customer = findCustomer(params.id);
+  const { id } = await params;
+
+  const customer = findCustomer(id);
   if (!customer) return new NextResponse("Customer not found", { status: 404 });
+
   return NextResponse.json(customer);
 }
