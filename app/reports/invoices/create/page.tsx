@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type ReadyJob = {
   id: string;
@@ -18,6 +19,7 @@ type ReadyGroup = {
 };
 
 export default function CreateInvoicesPage() {
+  const router = useRouter();
   const [groups, setGroups] = useState<ReadyGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -77,7 +79,7 @@ export default function CreateInvoicesPage() {
       setSelectedWorkOrderId(null);
       await refresh();
 
-      alert(`Invoice created (Draft)`);
+      router.push(`/invoices/${invoice.id}`);
     } catch (e: any) {
       setError(e?.message ?? "Failed to create invoice");
     } finally {

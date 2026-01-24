@@ -14,6 +14,7 @@
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "next": "16.1.4",
+    "pdfkit": "^0.17.2",
     "pg": "^8.17.2",
     "prisma": "^7.3.0",
     "react": "19.2.3",
@@ -22,6 +23,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pdfkit": "^0.17.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.23",

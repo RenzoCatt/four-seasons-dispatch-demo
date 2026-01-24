@@ -162,7 +162,7 @@ export default function WorkOrdersPage() {
 
     const c = customersById[w.customerId];
 
-    const haystack = [w.jobType, w.status, w.description, c?.name, c?.phone, c?.address, c?.notes]
+    const haystack = [w.description, w.status, w.description, c?.name, c?.phone, c?.address, c?.notes]
       .filter(Boolean)
       .join(" ")
       .toLowerCase();

@@ -30,9 +30,16 @@ export default function ReportsLayout({ children }: { children: React.ReactNode 
                 Create Invoices
               </Link>
 
-              <div className="block rounded px-3 py-2 opacity-50 text-gray-500 cursor-not-allowed">
-                Invoice Dashboard (soon)
-              </div>
+              <Link
+                href="/reports/invoices"
+                className={`block rounded px-3 py-2 transition ${
+                  isActive("/reports/invoices", pathname) && !pathname.includes("/create")
+                    ? "bg-brand-blue text-white font-medium"
+                    : "hover:bg-white/5"
+                }`}
+              >
+                Invoice Dashboard
+              </Link>
 
               <div className="block rounded px-3 py-2 opacity-50 text-gray-500 cursor-not-allowed">
                 Payments (soon)

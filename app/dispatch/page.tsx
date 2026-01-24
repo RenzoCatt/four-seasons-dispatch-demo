@@ -436,7 +436,7 @@ export default function DispatchPage() {
                                   key={ev.id}
                                   dragId={evDragId(ev.id)}
                                   timeLabel={`${fmtTime(ev.startAt)} – ${fmtTime(ev.endAt)}`}
-                                  title={`${w?.jobType ?? "Job"} — ${c?.name ?? "Unknown"}`}
+                                  title={`${w?.description ?? "Job"} — ${c?.name ?? "Unknown"}`}
                                   subtitle={w?.description ?? ""}
                                   onOpen={() => {
                                     setMenuEvent({
@@ -620,7 +620,7 @@ function WorkOrderCard({
       {...attributes}
     >
       <div className="font-medium text-sm">
-        {workOrder.jobType} — {customerName}
+        {workOrder.description || "Job"} — {customerName}
       </div>
       <div className="ui-muted">{workOrder.description}</div>
       <div className="text-xs text-gray-500 mt-2">{selected ? "Selected (click to deselect)" : "Drag or click"}</div>
