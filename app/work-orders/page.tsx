@@ -134,7 +134,7 @@ export default function WorkOrdersPage() {
     await fetch(`/api/work-orders/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "COMPLETED" }),
+      body: JSON.stringify({ status: "COMPLETED", completedAt: new Date().toISOString() }),
     });
     await refresh();
   }
