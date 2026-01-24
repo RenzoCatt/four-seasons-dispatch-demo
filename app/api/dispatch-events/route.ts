@@ -1,58 +1,84 @@
 import { NextResponse } from "next/server";
-import { store } from "@/lib/store";
+import { prisma } from "@/lib/prisma";
 
-function addMinutes(iso: string, minutes: number) {
-  const t = new Date(iso).getTime();
-  return new Date(t + minutes * 60_000).toISOString();
+function startOfWeekMonday(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  const day = x.getDay();
+  const diffToMonday = (day + 6) % 7;
+  x.setDate(x.getDate() - diffToMonday);
+  return x;
+}
+
+const STATUS_MAP: Record<string, "SCHEDULED" | "IN_PROGRESS" | "COMPLETE" | "CANCELED"> = {
+  scheduled: "SCHEDULED",
+  "in progress": "IN_PROGRESS",
+  in_progress: "IN_PROGRESS",
+  complete: "COMPLETE",
+  completed: "COMPLETE",
+  canceled: "CANCELED",
+  cancelled: "CANCELED",
+};
+
+function normalizeDispatchStatus(input: unknown) {
+  const key = String(input ?? "").trim().toLowerCase();
+  return STATUS_MAP[key] ?? "SCHEDULED";
 }
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const week = searchParams.get("week") ?? "";
+  const url = new URL(req.url);
+  const week = url.searchParams.get("week"); // "YYYY-MM-DD"
+  const base = week ? new Date(week + "T00:00:00") : new Date();
+  const monday = startOfWeekMonday(base);
+  const nextMonday = new Date(monday);
+  nextMonday.setDate(monday.getDate() + 7);
 
-  try {
-    const events = week ? store.listDispatchEventsForWeek(week) : store.dispatchEvents;
-    return NextResponse.json(events);
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "Bad request" }, { status: 400 });
-  }
+  const events = await prisma.dispatchEvent.findMany({
+    where: {
+      startAt: { gte: monday, lt: nextMonday },
+    },
+    orderBy: { startAt: "asc" },
+  });
+
+  return NextResponse.json(
+    events.map((e) => ({
+      id: e.id,
+      workOrderId: e.workOrderId,
+      techId: e.techId,
+      startAt: e.startAt.toISOString(),
+      endAt: e.endAt.toISOString(),
+      status: e.status, // return enum
+      notes: e.notes ?? "",
+    }))
+  );
 }
 
 export async function POST(req: Request) {
-  try {
-    const body = await req.json();
+  const body = await req.json();
 
-    const workOrderId = body.workOrderId as string;
-    const techId = body.techId as string;
-    const startAt = body.startAt as string;
-
-    // allow either endAt OR durationMinutes
-    let endAt = body.endAt as string | undefined;
-    const durationMinutes = body.durationMinutes as number | undefined;
-
-    if (!workOrderId || !techId || !startAt) {
-      return NextResponse.json(
-        { error: "workOrderId, techId, and startAt are required" },
-        { status: 400 }
-      );
-    }
-
-    if (!endAt) {
-      const mins = typeof durationMinutes === "number" && durationMinutes > 0 ? durationMinutes : 120;
-      endAt = addMinutes(startAt, mins);
-    }
-
-    const created = store.addDispatchEvent({
-      workOrderId,
-      techId,
-      startAt,
-      endAt,
-      status: body.status ?? "Scheduled",
-      notes: body.notes,
-    });
-
-    return NextResponse.json(created, { status: 201 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "Bad request" }, { status: 400 });
+  if (!body?.workOrderId || !body?.techId || !body?.startAt || !body?.endAt) {
+    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
+
+  // ✅ THIS is the fix: verify against DB, not store
+  const wo = await prisma.workOrder.findUnique({
+    where: { id: body.workOrderId },
+  });
+
+  if (!wo) {
+    return NextResponse.json({ error: "Work order not found" }, { status: 400 });
+  }
+
+  const created = await prisma.dispatchEvent.create({
+    data: {
+      workOrderId: wo.id,
+      techId: body.techId,
+      startAt: new Date(body.startAt),
+      endAt: new Date(body.endAt),
+      status: normalizeDispatchStatus(body.status),
+      notes: body.notes || null,
+    },
+  });
+
+  return NextResponse.json(created, { status: 201 });
 }

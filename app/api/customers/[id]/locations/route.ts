@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
-import { createLocation, getLocationsByCustomer } from "@/app/api/locations/store";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: customerId } = await params;
-  return NextResponse.json(getLocationsByCustomer(customerId));
+  const locations = await prisma.location.findMany({
+    where: { customerId },
+  });
+  return NextResponse.json(locations);
 }
 
 export async function POST(
@@ -20,11 +23,13 @@ export async function POST(
     return new NextResponse("Missing required fields", { status: 400 });
   }
 
-  const loc = createLocation({
-    customerId,
-    name: body.name,
-    address: body.address,
-    notes: body.notes ?? "",
+  const loc = await prisma.location.create({
+    data: {
+      customerId,
+      name: body.name,
+      address: body.address,
+      notes: body.notes ?? "",
+    },
   });
 
   return NextResponse.json(loc, { status: 201 });

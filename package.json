@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "four-seasons-dispatch-demo",
   "version": "0.1.0",
   "private": true,
@@ -10,7 +11,11 @@
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
+    "@prisma/adapter-pg": "^7.3.0",
+    "@prisma/client": "^7.3.0",
     "next": "16.1.4",
+    "pg": "^8.17.2",
+    "prisma": "^7.3.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
@@ -25,5 +30,8 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   }
 }

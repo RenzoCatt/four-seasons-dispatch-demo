@@ -24,13 +24,17 @@ type WorkOrderAttachment = {
 
 type WorkOrder = {
   id: string;
+  jobNumber: number;
   customerId: string;
   locationId?: string;
-  jobType: "Service" | "Install";
+  customerName: string;
+  locationAddress: string;
   description: string;
-  status: "New" | "Assigned" | "Complete";
-  assignedTechId?: string;
-  attachments?: WorkOrderAttachment[];
+  status: "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "CANCELED";
+  completedAt?: string | null;
+  assignedTechId?: string | null;
+  assignedStartAt?: string | null;
+  assignedEndAt?: string | null;
   createdAt: string;
 };
 
@@ -116,10 +120,8 @@ export default function WorkOrdersPage() {
       body: JSON.stringify({
         customerId,
         locationId: locationId || undefined,
-        jobType,
         description,
-        status: "New", // no tech assignment yet
-        attachments,
+        status: "SCHEDULED",
       }),
     });
 
@@ -132,7 +134,7 @@ export default function WorkOrdersPage() {
     await fetch(`/api/work-orders/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "Complete" }),
+      body: JSON.stringify({ status: "COMPLETED" }),
     });
     await refresh();
   }
@@ -168,9 +170,13 @@ export default function WorkOrdersPage() {
     return haystack.includes(q);
   });
 
-  const newJobs = filteredWorkOrders.filter((w) => w.status === "New");
-  const assignedJobs = filteredWorkOrders.filter((w) => w.status === "Assigned");
-  // const completeJobs = filteredWorkOrders.filter((w) => w.status === "Complete");
+  const completedJobs = filteredWorkOrders.filter((w) => w.status === "COMPLETED");
+  const assignedJobs = filteredWorkOrders.filter(
+    (w) => w.status !== "COMPLETED" && w.assignedTechId
+  );
+  const newJobs = filteredWorkOrders.filter(
+    (w) => w.status !== "COMPLETED" && !w.assignedTechId
+  );
 
   return (
     <div className="ui-page">
@@ -291,23 +297,31 @@ export default function WorkOrdersPage() {
         <button className="ui-btn ui-btn-primary ui-btn-block">Save Work Order</button>
       </form>
 
-      {/* Status columns (no Complete column for now) */}
-      <div className="grid lg:grid-cols-2 gap-4">
-<StatusColumn
-  title="New"
-  items={newJobs}
-  customersById={customersById}
-  techsById={techsById}
-  onMarkComplete={markComplete}
-/>
+      {/* Status columns */}
+      <div className="grid lg:grid-cols-3 gap-4">
+        <StatusColumn
+          title="New"
+          items={newJobs}
+          customersById={customersById}
+          techsById={techsById}
+          onMarkComplete={markComplete}
+        />
 
-<StatusColumn
-  title="Assigned"
-  items={assignedJobs}
-  customersById={customersById}
-  techsById={techsById}
-  onMarkComplete={markComplete}
-/>
+        <StatusColumn
+          title="Assigned"
+          items={assignedJobs}
+          customersById={customersById}
+          techsById={techsById}
+          onMarkComplete={markComplete}
+        />
+
+        <StatusColumn
+          title="Completed"
+          items={completedJobs}
+          customersById={customersById}
+          techsById={techsById}
+          onMarkComplete={markComplete}
+        />
       </div>
     </div>
   );
@@ -320,7 +334,7 @@ function StatusColumn({
   techsById,
   onMarkComplete,
 }: {
-  title: "New" | "Assigned";
+  title: "New" | "Assigned" | "Completed";
   items: WorkOrder[];
   customersById: Record<string, Customer>;
   techsById: Record<string, Technician>;
@@ -341,15 +355,27 @@ function StatusColumn({
           return (
             <div key={w.id} className="ui-item">
               <div className="font-medium text-sm">
-                {w.jobType} — {c?.name ?? "Unknown"}
+                Job #{w.jobNumber} — {c?.name ?? "Unknown"}
               </div>
 
               <div className="ui-muted">{w.description}</div>
 
               <div className="text-xs text-gray-500 mt-2">
-                {t ? (
+                {w.assignedTechId ? (
                   <>
-                    Tech: <span className="font-medium">{t.name}</span>
+                    <span className="block">
+                      Tech: <span className="font-medium text-white">{t?.name ?? "Unknown"}</span>
+                    </span>
+                    {w.assignedStartAt && (
+                      <span className="block text-gray-400 mt-0.5">
+                        {new Date(w.assignedStartAt).toLocaleString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    )}
                   </>
                 ) : (
                   "Unassigned"

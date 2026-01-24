@@ -15,12 +15,17 @@ type Technician = { id: string; name: string; status: "Available" | "Busy" };
 
 type WorkOrder = {
   id: string;
+  jobNumber: number;
   customerId: string;
   locationId?: string;
-  jobType: "Service" | "Install";
+  customerName: string;
+  locationAddress: string;
   description: string;
-  status: "New" | "Assigned" | "Complete";
-  assignedTechId?: string;
+  status: "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "CANCELED";
+  completedAt?: string | null;
+  assignedTechId?: string | null;
+  assignedStartAt?: string | null;
+  assignedEndAt?: string | null;
   createdAt: string;
 };
 
@@ -32,7 +37,7 @@ type DispatchEvent = {
   techId: string;
   startAt: string;
   endAt: string;
-  status: "Scheduled" | "InProgress" | "Complete" | "Canceled";
+  status: "SCHEDULED" | "IN_PROGRESS" | "COMPLETE" | "CANCELED";
   notes?: string;
 };
 
@@ -153,9 +158,23 @@ export default function DispatchPage() {
   const [modalStartTime, setModalStartTime] = useState<string>("08:00");
   const [modalDuration, setModalDuration] = useState<number>(120);
 
+  // event menu (for unassign)
+  const [menuEvent, setMenuEvent] = useState<null | {
+    id: string;
+    workOrderId: string;
+    techId: string;
+    startAt: string;
+    endAt: string;
+  }>(null);
+
   const customersById = useMemo(
     () => Object.fromEntries(customers.map((c) => [c.id, c])),
     [customers]
+  );
+
+  const techsById = useMemo(
+    () => Object.fromEntries(techs.map((t) => [t.id, t])),
+    [techs]
   );
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -189,13 +208,16 @@ export default function DispatchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart]);
 
-  const scheduledIdsThisWeek = useMemo(() => new Set(events.map((e) => e.workOrderId)), [events]);
+  const assignedWorkOrderIds = useMemo(
+    () => new Set(workOrders.filter((w) => w.assignedTechId).map((w) => w.id)),
+    [workOrders]
+  );
 
   const unscheduled = useMemo(() => {
     return workOrders
-      .filter((w) => w.status !== "Complete")
-      .filter((w) => !scheduledIdsThisWeek.has(w.id));
-  }, [workOrders, scheduledIdsThisWeek]);
+      .filter((w) => w.status !== "COMPLETED" && w.status !== "CANCELED")
+      .filter((w) => !assignedWorkOrderIds.has(w.id));
+  }, [workOrders, assignedWorkOrderIds]);
 
   function eventsForCell(techId: string, day: Date) {
     return events
@@ -237,8 +259,8 @@ export default function DispatchPage() {
     if (!drag || !drop) return;
 
     if (drag.kind === "wo") {
-      // prevent if already scheduled this week
-      if (scheduledIdsThisWeek.has(drag.id)) return;
+      // prevent if already assigned anywhere
+      if (assignedWorkOrderIds.has(drag.id)) return;
       openCreateModal(drag.id, drop.techId, drop.ymd);
       return;
     }
@@ -265,7 +287,7 @@ export default function DispatchPage() {
             techId: pending.techId,
             startAt,
             endAt,
-            status: "Scheduled",
+            status: "SCHEDULED",
           }),
         });
 
@@ -284,7 +306,7 @@ export default function DispatchPage() {
             techId: pending.techId,
             startAt,
             endAt,
-            status: "Scheduled",
+            status: "SCHEDULED",
           }),
         });
 
@@ -400,7 +422,7 @@ export default function DispatchPage() {
                           isSelecting={!!selectedWorkOrderId}
                           onClickAssign={() => {
                             if (!selectedWorkOrderId) return;
-                            if (scheduledIdsThisWeek.has(selectedWorkOrderId)) return;
+                            if (assignedWorkOrderIds.has(selectedWorkOrderId)) return;
                             openCreateModal(selectedWorkOrderId, t.id, ymd);
                           }}
                         >
@@ -416,6 +438,15 @@ export default function DispatchPage() {
                                   timeLabel={`${fmtTime(ev.startAt)} – ${fmtTime(ev.endAt)}`}
                                   title={`${w?.jobType ?? "Job"} — ${c?.name ?? "Unknown"}`}
                                   subtitle={w?.description ?? ""}
+                                  onOpen={() => {
+                                    setMenuEvent({
+                                      id: ev.id,
+                                      workOrderId: ev.workOrderId,
+                                      techId: ev.techId,
+                                      startAt: ev.startAt,
+                                      endAt: ev.endAt,
+                                    });
+                                  }}
                                 />
                               );
                             })}
@@ -498,6 +529,62 @@ export default function DispatchPage() {
           )}
         </DndContext>
       )}
+
+      {/* Event Menu Modal */}
+      {menuEvent && (
+        <div
+          className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
+          onClick={() => setMenuEvent(null)}
+        >
+          <div
+            className="ui-card ui-card-pad w-full max-w-xs"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="font-semibold mb-3">Event Options</div>
+
+            <div className="text-sm mb-4 bg-white/5 p-3 rounded border border-white/10">
+              <div className="block">
+                Tech: <span className="font-medium">{techsById[menuEvent.techId]?.name ?? menuEvent.techId}</span>
+              </div>
+              <div className="block text-gray-300 text-xs mt-1">
+                {new Date(menuEvent.startAt).toLocaleString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
+            </div>
+
+            <button
+              className="w-full rounded bg-red-600 text-white py-2 hover:bg-red-700 transition mb-2"
+              onClick={async () => {
+                const res = await fetch(`/api/dispatch-events/${menuEvent.id}`, {
+                  method: "DELETE",
+                });
+
+                if (!res.ok) {
+                  const txt = await res.text().catch(() => "");
+                  alert(`Failed to unassign: ${res.status}\n${txt}`);
+                  return;
+                }
+
+                setMenuEvent(null);
+                await refresh();
+              }}
+            >
+              Unassign
+            </button>
+
+            <button
+              className="w-full rounded border border-white/20 py-2 hover:bg-white/5 transition"
+              onClick={() => setMenuEvent(null)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -574,11 +661,13 @@ function EventBlock({
   timeLabel,
   title,
   subtitle,
+  onOpen,
 }: {
   dragId: string;
   timeLabel: string;
   title: string;
   subtitle: string;
+  onOpen: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: dragId });
 
@@ -593,6 +682,10 @@ function EventBlock({
       className={`rounded-lg border border-black/10 p-2 bg-gray-50 cursor-grab select-none ${
         isDragging ? "opacity-60" : ""
       }`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpen();
+      }}
       {...listeners}
       {...attributes}
     >
