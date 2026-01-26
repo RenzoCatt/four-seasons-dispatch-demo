@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,49 +7,161 @@ datasource db {
 }
 
 model Customer {
-  id        String   @id @default(cuid())
-  name      String
-  phone     String?
-  email     String?
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String            @id @default(cuid())
+  name         String
+  phone        String?
+  email        String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  notes        String?
+  company      String?
+  customerType CustomerType?     @default(HOMEOWNER)
+  displayName  String?
+  firstName    String?
+  lastName     String?
+  role         String?
+  addresses    CustomerAddress[]
+  emails       CustomerEmail[]
+  phones       CustomerPhone[]
+  tags         CustomerTag[]
+  invoices     Invoice[]
+  locations    Location[]
+  workOrders   WorkOrder[]
+}
 
-  locations  Location[]
-  workOrders WorkOrder[]
-  invoices   Invoice[]
+model CustomerEmail {
+  id         String   @id @default(cuid())
+  customerId String
+  value      String
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, value])
+}
+
+model CustomerPhone {
+  id         String    @id @default(cuid())
+  customerId String
+  type       PhoneType @default(MOBILE)
+  value      String
+  note       String?
+  createdAt  DateTime  @default(now())
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, type, value])
+}
+
+model CustomerAddress {
+  id           String   @id @default(cuid())
+  customerId   String
+  street       String
+  unit         String?
+  municipality String
+  province     String
+  postalCode   String
+  addressNotes String?
+  isBilling    Boolean  @default(false)
+  isService    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model CustomerTag {
+  id         String   @id @default(cuid())
+  customerId String
+  value      String
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, value])
 }
 
 model Location {
-  id         String   @id @default(cuid())
+  id         String      @id @default(cuid())
   customerId String
   name       String
   address    String
   notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  customer  Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  workOrders WorkOrder[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
   invoices   Invoice[]
+  customer   Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  workOrders WorkOrder[]
 }
 
 model WorkOrder {
-  id          String   @id @default(cuid())
-  jobNumber   Int      @default(autoincrement())
-  customerId  String
-  locationId  String
-  status      WorkOrderStatus @default(SCHEDULED)
-  description String?
-  completedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  invoice  Invoice?
-
+  id            String          @id @default(cuid())
+  customerId    String
+  locationId    String
+  description   String?
+  completedAt   DateTime?
+  createdAt     DateTime        @default(now())
+  jobNumber     Int             @default(autoincrement())
+  updatedAt     DateTime        @updatedAt
+  status        WorkOrderStatus @default(SCHEDULED)
   dispatchEvent DispatchEvent?
+  invoice       Invoice?
+  customer      Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  location      Location        @relation(fields: [locationId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id            String            @id @default(cuid())
+  invoiceNumber Int               @default(autoincrement())
+  customerId    String
+  locationId    String
+  workOrderId   String            @unique
+  status        InvoiceStatus     @default(DRAFT)
+  subtotal      Int               @default(0)
+  tax           Int               @default(0)
+  total         Int               @default(0)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  publicToken   String?           @unique
+  sentAt        DateTime?
+  customer      Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  location      Location          @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  workOrder     WorkOrder         @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  lineItems     InvoiceLineItem[]
+}
+
+model InvoiceLineItem {
+  id          String       @id @default(cuid())
+  invoiceId   String
+  type        LineItemType
+  description String
+  quantity    Int          @default(1)
+  unitPrice   Int          @default(0)
+  total       Int          @default(0)
+  createdAt   DateTime     @default(now())
+  invoice     Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model DispatchEvent {
+  id          String         @id @default(cuid())
+  workOrderId String         @unique
+  techId      String
+  startAt     DateTime
+  endAt       DateTime
+  status      DispatchStatus @default(SCHEDULED)
+  notes       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  workOrder   WorkOrder      @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([techId, startAt])
+}
+
+enum PhoneType {
+  MOBILE
+  HOME
+  WORK
+  OTHER
+}
+
+enum CustomerType {
+  HOMEOWNER
+  BUSINESS
 }
 
 enum WorkOrderStatus {
@@ -65,35 +171,6 @@ enum WorkOrderStatus {
   CANCELED
 }
 
-model Invoice {
-  id            String   @id @default(cuid())
-  invoiceNumber Int      @default(autoincrement())
-
-  customerId  String
-  locationId  String
-  workOrderId String  @unique
-
-  status      InvoiceStatus @default(DRAFT)
-
-  subtotal    Int     @default(0) // cents
-  tax         Int     @default(0) // cents
-  total       Int     @default(0) // cents
-
-  publicToken String?  @unique  // For public portal link
-  sentAt      DateTime?        // When invoice was sent
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-
-  // Owning side of the relation (fields + references ONLY here)
-  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-
-  lineItems InvoiceLineItem[]
-}
-
 enum InvoiceStatus {
   DRAFT
   SENT
@@ -101,42 +178,10 @@ enum InvoiceStatus {
   VOID
 }
 
-model InvoiceLineItem {
-  id          String   @id @default(cuid())
-  invoiceId   String
-
-  type        LineItemType
-  description String
-  quantity    Int      @default(1)
-  unitPrice   Int      @default(0) // cents
-  total       Int      @default(0) // cents
-
-  createdAt   DateTime @default(now())
-
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-}
-
 enum LineItemType {
   LABOR
   PART
   FEE
-}
-
-model DispatchEvent {
-  id        String   @id @default(cuid())
-  workOrderId String @unique
-  techId    String
-  startAt   DateTime
-  endAt     DateTime
-  status    DispatchStatus @default(SCHEDULED)
-  notes     String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-
-  @@index([techId, startAt])
 }
 
 enum DispatchStatus {

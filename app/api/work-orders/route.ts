@@ -49,14 +49,49 @@ export async function GET() {
 export async function POST(req: Request) {
   const body = await req.json();
 
-  if (!body?.customerId || !body?.locationId) {
-    return new NextResponse("Missing customerId or locationId", { status: 400 });
+  if (!body?.customerId) {
+    return new NextResponse("Missing customerId", { status: 400 });
+  }
+
+  if (!body?.serviceAddress && !body?.locationId) {
+    return new NextResponse("Missing serviceAddress or locationId", { status: 400 });
+  }
+
+  // Prepare locationId - either from body, or create a placeholder location
+  let locationId = body.locationId;
+
+  if (!locationId) {
+    // Create a placeholder location from the serviceAddress
+    // This maintains the FK constraint while transitioning from Location table to CustomerAddress
+    const location = await prisma.location.create({
+      data: {
+        customerId: body.customerId,
+        name: "Service Location",
+        address: body.serviceAddress || "Address not specified",
+        notes: "Auto-created from customer address",
+      },
+    });
+    locationId = location.id;
+  } else {
+    // If locationId provided, verify it matches customerId
+    const location = await prisma.location.findUnique({
+      where: { id: locationId },
+      select: { customerId: true },
+    });
+
+    if (!location) {
+      return new NextResponse("Location not found", { status: 404 });
+    }
+
+    if (location.customerId !== body.customerId) {
+      return new NextResponse("Location does not belong to customer", { status: 400 });
+    }
   }
 
   const created = await prisma.workOrder.create({
     data: {
       customerId: body.customerId,
-      locationId: body.locationId,
+      locationId: locationId,
       description: body.description ?? "",
       status: normalizeStatus(body.status),
     },

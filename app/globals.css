@@ -62,10 +62,19 @@ body {
     focus:outline-none focus:ring-2 focus:ring-brand-blue;
 }
 
+/* Inline variant: allow width to be controlled by parent layout */
+.ui-input.ui-input-inline {
+  width: auto;
+}
+
 .ui-select {
   @apply w-full rounded-lg px-4 py-3 text-black
     border border-brand-blue/30
     focus:outline-none focus:ring-2 focus:ring-brand-blue;
+}
+
+.ui-select.ui-select-inline {
+  width: auto;
 }
 
 /* Buttons */
