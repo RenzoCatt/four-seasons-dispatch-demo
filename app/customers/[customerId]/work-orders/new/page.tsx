@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CustomerNav from "../../../components/CustomerNav";
+import LineItemsCard from "@/app/components/LineItemsCard";
 
 type LineItem = {
   id: string;
@@ -12,6 +13,10 @@ type LineItem = {
   qty: number;
   unitPrice: number; // dollars
   taxable: boolean;
+  // Price book fields
+  priceBookItemId?: string;
+  rateTier?: "STANDARD" | "MEMBER" | "RUMI";
+  availableRates?: Partial<Record<"STANDARD" | "MEMBER" | "RUMI", number>>;
 };
 
 const TAX_RATE = 0.05; // GST 5%
@@ -28,8 +33,10 @@ function newItem(kind: LineItem["kind"]): LineItem {
   };
 }
 
-function money(n: number) {
-  return n.toFixed(2);
+function money(n: unknown) {
+  const num = Number(n);
+  if (!Number.isFinite(num)) return "0.00";
+  return num.toFixed(2);
 }
 
 type Address = {
@@ -66,6 +73,12 @@ export default function NewWorkOrderFromCustomerPage() {
   const [services, setServices] = useState<LineItem[]>([]);
   const [materials, setMaterials] = useState<LineItem[]>([]);
 
+  // Price book picker state
+  const [servicePickerOpen, setServicePickerOpen] = useState(false);
+  const [serviceQuery, setServiceQuery] = useState("");
+  const [serviceResults, setServiceResults] = useState<any[]>([]);
+  const [serviceLoading, setServiceLoading] = useState(false);
+
   useEffect(() => {
     async function loadCustomer() {
       setLoading(true);
@@ -83,6 +96,36 @@ export default function NewWorkOrderFromCustomerPage() {
     }
     loadCustomer();
   }, [customerId]);
+
+  // Search services from price book
+  async function searchServices(q: string) {
+    setServiceLoading(true);
+    try {
+      const res = await fetch(
+        `/api/pricebook/search?q=${encodeURIComponent(q)}&tier=STANDARD&limit=200`,
+        { cache: "no-store" }
+      );
+      const data = await res.json();
+      setServiceResults(data.items ?? data ?? []);
+    } finally {
+      setServiceLoading(false);
+    }
+  }
+
+  // Load default items when modal opens
+  useEffect(() => {
+    if (!servicePickerOpen) return;
+    searchServices(""); // load top services on open
+  }, [servicePickerOpen]);
+
+  // Debounced search
+  useEffect(() => {
+    if (!servicePickerOpen) return;
+    const t = setTimeout(() => {
+      searchServices(serviceQuery.trim());
+    }, 200);
+    return () => clearTimeout(t);
+  }, [serviceQuery, servicePickerOpen]);
 
   const addService = () => setServices((prev) => [...prev, newItem("SERVICE")]);
   const addMaterial = () => setMaterials((prev) => [...prev, newItem("MATERIAL")]);
@@ -115,8 +158,26 @@ export default function NewWorkOrderFromCustomerPage() {
       const serviceAddress = [line1, line2].filter(Boolean).join(" — ");
 
       const lineItems = [
-        ...services.map((s) => ({ ...s, kind: "SERVICE" as const })),
-        ...materials.map((m) => ({ ...m, kind: "MATERIAL" as const })),
+        ...services.map((s) => ({
+          kind: "SERVICE" as const,
+          name: s.name,
+          description: s.description,
+          qty: Number(s.qty) || 0,
+          unitPrice: Number(s.unitPrice) || 0,
+          taxable: !!s.taxable,
+          priceBookItemId: s.priceBookItemId ?? null,
+          rateTier: s.rateTier ?? null,
+        })),
+        ...materials.map((m) => ({
+          kind: "MATERIAL" as const,
+          name: m.name,
+          description: m.description,
+          qty: Number(m.qty) || 0,
+          unitPrice: Number(m.unitPrice) || 0,
+          taxable: !!m.taxable,
+          priceBookItemId: m.priceBookItemId ?? null,
+          rateTier: m.rateTier ?? null,
+        })),
       ];
 
       const res = await fetch("/api/work-orders", {
@@ -134,7 +195,7 @@ export default function NewWorkOrderFromCustomerPage() {
       if (!res.ok) throw new Error((await res.text().catch(() => "")) || res.statusText);
 
       const workOrder = await res.json();
-      router.push(`/work-orders/${workOrder.id}`);
+      router.push(`/jobs/${workOrder.id}`);
     } catch (e: any) {
       setError(e?.message || "Failed to create work order");
     } finally {
@@ -177,6 +238,14 @@ export default function NewWorkOrderFromCustomerPage() {
 
   return (
     <div className="ui-page">
+      <button
+        type="button"
+        className="ui-btn"
+        onClick={() => router.push("/customers?createJob=1")}
+      >
+        Back to customer search
+      </button>
+
       <h1 className="ui-title">Create Work Order</h1>
       <CustomerNav customerId={customerId} />
 
@@ -277,7 +346,6 @@ export default function NewWorkOrderFromCustomerPage() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="What needs to be done? (e.g., furnace maintenance, AC repair, no heat call)"
-                required
               />
             </div>
 
@@ -305,7 +373,10 @@ export default function NewWorkOrderFromCustomerPage() {
                   <button
                     type="button"
                     className="ui-btn ui-btn-primary"
-                    onClick={() => setServices((prev) => [...prev, newItem("SERVICE")])}
+                    onClick={() => {
+                      setServicePickerOpen(true);
+                      setServiceQuery("");
+                    }}
                     title="Add service"
                   >
                     +
@@ -314,10 +385,18 @@ export default function NewWorkOrderFromCustomerPage() {
 
                 <div
                   className="text-sm text-sky-700 mt-2 cursor-pointer"
-                  onClick={() => setServices((prev) => [...prev, newItem("SERVICE")])}
+                  onClick={() => {
+                    setServicePickerOpen(true);
+                    setServiceQuery("");
+                  }}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => (e.key === "Enter" ? setServices((prev) => [...prev, newItem("SERVICE")]) : null)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      setServicePickerOpen(true);
+                      setServiceQuery("");
+                    }
+                  }}
                 >
                   Add service
                 </div>
@@ -358,6 +437,26 @@ export default function NewWorkOrderFromCustomerPage() {
                               />
                               Taxable
                             </label>
+                            {item.availableRates && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <div className="text-xs text-gray-500">Rate</div>
+                                <select
+                                  className="ui-input w-40"
+                                  value={item.rateTier ?? "STANDARD"}
+                                  onChange={(e) => {
+                                    const tier = e.target.value as "STANDARD" | "MEMBER" | "RUMI";
+                                    const price = Number(item.availableRates?.[tier] ?? item.unitPrice);
+                                    setServices((prev) =>
+                                      prev.map((x) => (x.id === item.id ? { ...x, rateTier: tier, unitPrice: price } : x))
+                                    );
+                                  }}
+                                >
+                                  {item.availableRates.STANDARD != null && <option value="STANDARD">Standard</option>}
+                                  {item.availableRates.MEMBER != null && <option value="MEMBER">Member</option>}
+                                  {item.availableRates.RUMI != null && <option value="RUMI">Rumi</option>}
+                                </select>
+                              </div>
+                            )}
                           </div>
 
                           <div className="col-span-6 lg:col-span-2">
@@ -547,6 +646,12 @@ export default function NewWorkOrderFromCustomerPage() {
               </div>
             </div>
 
+            {error && (
+              <div className="ui-item p-3 mb-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
             <div className="flex items-center justify-end gap-2">
               <button type="button" className="ui-btn" onClick={() => router.back()} disabled={saving}>
                 Cancel
@@ -554,7 +659,7 @@ export default function NewWorkOrderFromCustomerPage() {
               <button
                 type="submit"
                 className="ui-btn ui-btn-primary"
-                disabled={saving || !description.trim()}
+                disabled={saving}
               >
                 {saving ? "Creating..." : "Create Work Order"}
               </button>
@@ -562,6 +667,114 @@ export default function NewWorkOrderFromCustomerPage() {
           </form>
         )}
       </div>
+
+      {/* Price Book Picker Modal */}
+      {servicePickerOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          onClick={() => setServicePickerOpen(false)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-semibold">Add Service</h2>
+                <button
+                  type="button"
+                  onClick={() => setServicePickerOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl"
+                >
+                  ✕
+                </button>
+              </div>
+              <input
+                type="text"
+                className="ui-input w-full"
+                placeholder="Search services..."
+                value={serviceQuery}
+                onChange={(e) => setServiceQuery(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {serviceLoading ? (
+                <div className="text-sm text-gray-500">Loading...</div>
+              ) : (
+                <ServiceResultsList
+                  items={serviceResults}
+                  onPick={(item) => {
+                    const rates = item.rates ?? {};
+                    const defaultTier =
+                      rates.STANDARD != null
+                        ? "STANDARD"
+                        : rates.MEMBER != null
+                        ? "MEMBER"
+                        : rates.RUMI != null
+                        ? "RUMI"
+                        : "STANDARD";
+                    const unitPrice = Number(rates[defaultTier] ?? item.unitPrice ?? 0);
+
+                    const newService: LineItem = {
+                      id: crypto.randomUUID(),
+                      kind: "SERVICE",
+                      name: item.name,
+                      description: item.description ?? "",
+                      qty: 1,
+                      unitPrice,
+                      taxable: item.taxableDefault ?? true,
+                      priceBookItemId: item.id,
+                      rateTier: defaultTier,
+                      availableRates: rates,
+                    };
+                    setServices((prev) => [...prev, newService]);
+                    setServicePickerOpen(false);
+                  }}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Helper component to group results by category
+function ServiceResultsList({ items, onPick }: { items: any[]; onPick: (item: any) => void }) {
+  if (!items.length) {
+    return <div className="text-sm text-gray-500">No results found. Try searching for services like "furnace" or "repair".</div>;
+  }
+
+  // Group by category
+  const byCategory: Record<string, any[]> = {};
+  for (const item of items) {
+    const cat = item.category || "Other";
+    if (!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(item);
+  }
+
+  return (
+    <div className="space-y-4">
+      {Object.entries(byCategory).map(([cat, catItems]) => (
+        <div key={cat}>
+          <div className="text-sm font-semibold text-gray-700 mb-2">{cat}</div>
+          <div className="space-y-1">
+            {catItems.map((item) => (
+              <div
+                key={item.id}
+                className="p-3 border rounded hover:bg-blue-50 cursor-pointer"
+                onClick={() => onPick(item)}
+              >
+                <div className="font-medium text-sm">{item.name}</div>
+                {item.description && <div className="text-xs text-gray-600 mt-1">{item.description}</div>}
+                <div className="text-sm font-semibold text-gray-800 mt-1">${money(item.unitPrice)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

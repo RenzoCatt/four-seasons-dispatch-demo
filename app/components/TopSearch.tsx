@@ -7,8 +7,8 @@ export default function TopSearch() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const isWorkOrders = pathname.startsWith("/work-orders");
-  const targetPath = isWorkOrders ? "/work-orders" : "/customers";
+  const isJobs = pathname.startsWith("/jobs");
+  const targetPath = isJobs ? "/jobs" : "/customers";
 
   const [q, setQ] = useState("");
 
@@ -27,7 +27,7 @@ export default function TopSearch() {
       <form onSubmit={onSubmit}>
         <input
           className="ui-input"
-          placeholder={isWorkOrders ? "Search work orders..." : "Search customers..."}
+          placeholder={isJobs ? "Search jobs..." : "Search customers..."}
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />

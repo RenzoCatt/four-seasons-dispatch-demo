@@ -11,7 +11,10 @@ export async function POST(req: Request) {
 
   const wo = await prisma.workOrder.findUnique({
     where: { id: workOrderId },
-    include: { invoice: true },
+    include: { 
+      invoice: true,
+      lineItems: true,
+    },
   });
 
   if (!wo) {
@@ -37,6 +40,20 @@ export async function POST(req: Request) {
       total: 0,
     },
   });
+
+  // Copy line items from work order to invoice
+  if (wo.lineItems && wo.lineItems.length > 0) {
+    await prisma.invoiceLineItem.createMany({
+      data: wo.lineItems.map((li) => ({
+        invoiceId: invoice.id,
+        type: li.type === "SERVICE" || li.type === "MATERIAL" ? li.type as any : "LABOR",
+        description: li.description,
+        quantity: Math.round(li.qty),
+        unitPrice: Math.round(li.unitPrice * 100), // Convert to cents
+        total: Math.round(li.qty * li.unitPrice * 100),
+      })),
+    });
+  }
 
   return NextResponse.json(invoice, { status: 201 });
 }

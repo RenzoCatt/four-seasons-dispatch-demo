@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import TopSearch from "../components/TopSearch";
 import CustomersSubtabs from "./components/CustomersSubtabs";
@@ -17,7 +17,9 @@ type Customer = {
 
 export default function CustomersListPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const q = (searchParams.get("q") ?? "").toLowerCase();
+  const createJobMode = searchParams.get("createJob") === "1";
 
   const [customers, setCustomers] = useState<Customer[]>([]);
 
@@ -59,18 +61,38 @@ useEffect(() => {
     });
   }, [customers, q]);
 
+  function onCustomerClick(id: string) {
+    if (createJobMode) {
+      router.push(`/customers/${id}/work-orders/new`);
+    } else {
+      router.push(`/customers/${id}`);
+    }
+  }
+
   return (
     <div className="ui-page">
       <CustomersSubtabs />
+
+      {createJobMode && (
+        <div className="ui-card ui-card-pad mb-4">
+          <div className="font-semibold">Step 1: Select customer</div>
+          <div className="text-sm text-gray-600 mt-1">
+            Click a customer to choose a service location and create a job.
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
           <h1 className="ui-title">Customer List</h1>
           <p className="ui-subtitle">Manage your customer accounts and history.</p>
         </div>
 
-        <Link href="/customers/new" className="ui-btn ui-btn-primary">
-          Add New Customer
-        </Link>
+        {!createJobMode && (
+          <Link href="/customers/new" className="ui-btn ui-btn-primary">
+            Add New Customer
+          </Link>
+        )}
       </div>
 
       <div className="mt-4">
@@ -87,16 +109,31 @@ useEffect(() => {
 
         <div className="space-y-2">
 {filteredCustomers.map((c) => (
-  <Link
+  <div
     key={c.id}
-    href={`/customers/${c.id}`}
-    className="block ui-item hover:opacity-90 transition"
+    className="ui-item flex items-start justify-between gap-3"
   >
-    <div className="font-medium">{c.name}</div>
-    <div className="text-sm text-gray-600">{c.phone}</div>
-    <div className="text-sm text-gray-600">{c.address}</div>
-    {c.notes && <div className="text-xs text-gray-500 mt-1">{c.notes}</div>}
-  </Link>
+    <button
+      type="button"
+      onClick={() => onCustomerClick(c.id)}
+      className="flex-1 text-left hover:opacity-90 transition"
+    >
+      <div className="font-medium">{c.name}</div>
+      <div className="text-sm text-gray-600">{c.phone}</div>
+      <div className="text-sm text-gray-600">{c.address}</div>
+      {c.notes && <div className="text-xs text-gray-500 mt-1">{c.notes}</div>}
+    </button>
+
+    {createJobMode && (
+      <button
+        type="button"
+        className="ui-btn ui-btn-primary whitespace-nowrap"
+        onClick={() => router.push(`/customers/${c.id}/work-orders/new`)}
+      >
+        Select
+      </button>
+    )}
+  </div>
 ))}
 
           {filteredCustomers.length === 0 && (

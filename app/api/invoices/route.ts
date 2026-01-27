@@ -6,6 +6,7 @@ export async function GET() {
     const invoices = await prisma.invoice.findMany({
       include: {
         customer: true,
+        lineItems: true,
       },
       orderBy: { createdAt: "desc" },
     });

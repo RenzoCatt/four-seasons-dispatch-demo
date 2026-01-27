@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import LineItemsCard from "@/app/components/LineItemsCard";
 
 type LineItem = {
   id: string;
@@ -76,7 +77,7 @@ export default function InvoicePage() {
     refresh();
   }, [id]);
 
-  const canEdit = invoice?.status === "DRAFT";
+  const canEdit = false; // invoice preview is always read-only
 
   async function addItem() {
     if (!desc.trim()) return;
@@ -184,6 +185,17 @@ export default function InvoicePage() {
     }
   }
 
+  async function openPdf() {
+    const res = await fetch(`/api/invoices/${id}/pdf`, { cache: "no-store" });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+  }
+
   if (loading) {
     return (
       <div className="ui-page">
@@ -219,7 +231,7 @@ export default function InvoicePage() {
           <div className="flex flex-wrap gap-2">
             <button
               className="ui-btn"
-              onClick={() => window.open(`/api/invoices/${id}/pdf`, "_blank")}
+              onClick={() => openPdf().catch(e => setError(e.message))}
             >
               View PDF
             </button>
@@ -293,112 +305,23 @@ export default function InvoicePage() {
           </div>
         </div>
 
-        <div className="ui-item">
-          <div className="px-4 py-3 border-b border-white/10 font-semibold">Line Items</div>
-
-          <div className="grid grid-cols-[120px_1fr_80px_120px_120px_80px] gap-2 px-4 py-3 text-xs font-semibold text-gray-500">
-            <div>Type</div>
-            <div>Description</div>
-            <div>Qty</div>
-            <div>Unit</div>
-            <div>Total</div>
-            <div />
-          </div>
-
-          {invoice.lineItems.map((li) => (
-            <div
-              key={li.id}
-              className="grid grid-cols-[120px_1fr_80px_120px_120px_80px] gap-2 px-4 py-3 border-t border-white/5 items-center text-sm"
-            >
-              <div className="text-gray-400">{li.type}</div>
-              <div className="truncate">{li.description}</div>
-              <div className="text-gray-400">{li.quantity}</div>
-              <div className="text-gray-400">{money(li.unitPrice)}</div>
-              <div>{money(li.total)}</div>
-              <div className="text-right">
-                <button
-                  className="text-red-400 hover:text-red-300 disabled:opacity-50 text-xs"
-                  disabled={!canEdit || saving}
-                  onClick={() => removeItem(li.id)}
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-          ))}
-
-          {invoice.lineItems.length === 0 && (
-            <div className="px-4 py-6 text-sm text-gray-600">
-              No line items yet.
-            </div>
-          )}
-        </div>
-
-        {canEdit && (
-          <div className="ui-item p-4">
-            <div className="font-semibold mb-4">Add Line Item</div>
-
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
-              <div className="md:col-span-1">
-                <label className="block text-xs text-gray-500 mb-1">Type</label>
-                <select
-                  className="ui-input w-full"
-                  value={type}
-                  disabled={saving}
-                  onChange={(e) => setType(e.target.value as any)}
-                >
-                  <option value="LABOR">Labor</option>
-                  <option value="PART">Part</option>
-                  <option value="FEE">Fee</option>
-                </select>
-              </div>
-
-              <div className="md:col-span-3">
-                <label className="block text-xs text-gray-500 mb-1">Description</label>
-                <input
-                  className="ui-input w-full"
-                  value={desc}
-                  disabled={saving}
-                  onChange={(e) => setDesc(e.target.value)}
-                  placeholder="Service call labor"
-                />
-              </div>
-
-              <div className="md:col-span-1">
-                <label className="block text-xs text-gray-500 mb-1">Qty</label>
-                <input
-                  className="ui-input w-full"
-                  type="number"
-                  value={qty}
-                  min={1}
-                  disabled={saving}
-                  onChange={(e) => setQty(Number(e.target.value))}
-                />
-              </div>
-
-              <div className="md:col-span-1">
-                <label className="block text-xs text-gray-500 mb-1">Unit ($)</label>
-                <input
-                  className="ui-input w-full"
-                  type="number"
-                  value={unit}
-                  min={0}
-                  step="0.01"
-                  disabled={saving}
-                  onChange={(e) => setUnit(Number(e.target.value))}
-                />
-              </div>
-            </div>
-
-            <button
-              className="mt-4 ui-btn ui-btn-primary"
-              disabled={saving || !desc.trim()}
-              onClick={addItem}
-            >
-              {saving ? "Saving..." : "Add Item"}
-            </button>
-          </div>
+        {invoice.lineItems && invoice.lineItems.length > 0 && (
+          <LineItemsCard
+            items={invoice.lineItems}
+            taxRate={0.05}
+            readOnly={true}
+            onRemove={undefined}
+            disabled={true}
+            title="Line Items"
+            descriptionField="description"
+            typeField="type"
+            qtyField="quantity"
+            unitPriceField="unitPrice"
+            taxableField="taxable"
+            moneyFormatter={money}
+          />
         )}
+
       </div>
     </div>
   );

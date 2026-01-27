@@ -90,39 +90,53 @@ model Location {
 }
 
 model WorkOrder {
-  id            String          @id @default(cuid())
+  id            String                 @id @default(cuid())
   customerId    String
   locationId    String
   description   String?
   completedAt   DateTime?
-  createdAt     DateTime        @default(now())
-  jobNumber     Int             @default(autoincrement())
-  updatedAt     DateTime        @updatedAt
-  status        WorkOrderStatus @default(SCHEDULED)
+  createdAt     DateTime               @default(now())
+  jobNumber     Int                    @default(autoincrement())
+  updatedAt     DateTime               @updatedAt
+  status        WorkOrderStatus        @default(SCHEDULED)
   dispatchEvent DispatchEvent?
   invoice       Invoice?
-  customer      Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  location      Location        @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  lineItems     WorkOrderLineItem[]
+  customer      Customer               @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  location      Location               @relation(fields: [locationId], references: [id], onDelete: Cascade)
 }
 
 model Invoice {
-  id            String            @id @default(cuid())
-  invoiceNumber Int               @default(autoincrement())
+  id            String                 @id @default(cuid())
+  invoiceNumber Int                    @default(autoincrement())
   customerId    String
   locationId    String
-  workOrderId   String            @unique
-  status        InvoiceStatus     @default(DRAFT)
-  subtotal      Int               @default(0)
-  tax           Int               @default(0)
-  total         Int               @default(0)
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  publicToken   String?           @unique
+  workOrderId   String                 @unique
+  status        InvoiceStatus          @default(DRAFT)
+  subtotal      Int                    @default(0)
+  tax           Int                    @default(0)
+  total         Int                    @default(0)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  publicToken   String?                @unique
   sentAt        DateTime?
-  customer      Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  location      Location          @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  workOrder     WorkOrder         @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  customer      Customer               @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  location      Location               @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  workOrder     WorkOrder              @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
   lineItems     InvoiceLineItem[]
+}
+
+model WorkOrderLineItem {
+  id          String   @id @default(cuid())
+  workOrderId String
+  type        String   // "SERVICE" | "MATERIAL" | "LABOR" etc
+  description String
+  qty         Float    @default(1)
+  unitPrice   Float    @default(0)
+  taxable     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
 }
 
 model InvoiceLineItem {
@@ -179,6 +193,8 @@ enum InvoiceStatus {
 }
 
 enum LineItemType {
+  SERVICE
+  MATERIAL
   LABOR
   PART
   FEE
@@ -189,4 +205,50 @@ enum DispatchStatus {
   IN_PROGRESS
   COMPLETE
   CANCELED
+}
+
+model PriceBookUpload {
+  id            String          @id @default(cuid())
+  createdAt     DateTime        @default(now())
+  filename      String
+  checksum      String
+  notes         String?
+  isActive      Boolean         @default(false)
+  effectiveDate DateTime?
+  items         PriceBookItem[]
+}
+
+model PriceBookItem {
+  id              String           @id @default(cuid())
+  uploadId        String
+  sheet           String           // HVAC, Boiler, Plumbing
+  category        String
+  code            String
+  name            String
+  description     String?
+  taxableDefault  Boolean          @default(true)
+  hours           Decimal?         @db.Decimal(10, 2)
+  equipment       Decimal?         @db.Decimal(10, 2)
+  hourlyRate      Decimal?         @db.Decimal(10, 2)
+  materialMarkUp  Decimal?         @db.Decimal(10, 2)
+  upload          PriceBookUpload  @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  rates           PriceBookRate[]
+
+  // Allow duplicate codes; identity is random id
+}
+
+model PriceBookRate {
+  id        String        @id @default(cuid())
+  itemId    String
+  tier      PricingTier
+  unitPrice Decimal       @db.Decimal(10, 2)
+  item      PriceBookItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, tier])
+}
+
+enum PricingTier {
+  MEMBER
+  STANDARD
+  RUMI
 }

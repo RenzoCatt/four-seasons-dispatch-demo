@@ -23,6 +23,7 @@ export async function GET() {
       location: true,
       invoice: true,
       dispatchEvent: true,
+      lineItems: true,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -100,6 +101,20 @@ export async function POST(req: Request) {
       location: true,
     },
   });
+
+  // Save line items if provided
+  if (body.lineItems && Array.isArray(body.lineItems) && body.lineItems.length > 0) {
+    await prisma.workOrderLineItem.createMany({
+      data: body.lineItems.map((item: any) => ({
+        workOrderId: created.id,
+        type: item.kind || item.type || "SERVICE",
+        description: item.description || "",
+        qty: item.qty || 1,
+        unitPrice: item.unitPrice || 0,
+        taxable: item.taxable !== false,
+      })),
+    });
+  }
 
   return NextResponse.json(created, { status: 201 });
 }
