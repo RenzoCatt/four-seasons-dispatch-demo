@@ -59,7 +59,30 @@ export default function AddCustomerPage() {
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // Address state helpers
+  function updateAddress(idx: number, patch: Partial<AddressBlock>) {
+    setAddresses((prev) => prev.map((a, i) => (i === idx ? { ...a, ...patch } : a)));
+  }
 
+  function addAddress() {
+    setAddresses((prev) => [
+      ...prev,
+      { street: "", unit: "", municipality: "", province: "AB", postalCode: "", addressNotes: "" },
+    ]);
+  }
+
+  function removeAddress(idx: number) {
+    setAddresses((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function makePrimary(idx: number) {
+    setAddresses((prev) => {
+      const copy = [...prev];
+      const [picked] = copy.splice(idx, 1);
+      copy.unshift(picked);
+      return copy;
+    });
+  }
   // Auto-fill display name if user hasn’t typed one
   useEffect(() => {
     const auto = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
@@ -109,6 +132,11 @@ export default function AddCustomerPage() {
 
     setSaving(true);
     try {
+      // Filter out empty address blocks
+      const cleanedAddresses = addresses.filter((a) =>
+        [a.street, a.municipality, a.province, a.postalCode].some((x) => x?.trim())
+      );
+
       const resCustomer = await fetch("/api/customers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -127,7 +155,7 @@ export default function AddCustomerPage() {
             { type: "work", value: workPhone.trim() },
             ...extraPhones.map((p) => ({ type: "other", value: p.value.trim(), note: p.note.trim() })),
           ].filter((p: any) => p.value),
-          addresses,
+          addresses: cleanedAddresses,
           tags,
           billsTo: billsTo.trim() || undefined,
           leadSource: leadSource.trim() || undefined,
@@ -312,85 +340,90 @@ export default function AddCustomerPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-4">
-              {/* Only first address block for now */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="md:col-span-3">
-                  <input
-                    className="ui-input"
-                    placeholder="Street"
-                    value={addresses[0].street}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setAddresses((prev) => [{ ...prev[0], street: v }]);
-                    }}
-                  />
+              {addresses.map((addr, idx) => (
+                <div key={idx} className="ui-item p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-sm font-semibold">
+                      Address {idx === 0 ? "• Primary" : `#${idx + 1}`}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {idx !== 0 && (
+                        <button type="button" className="ui-btn" onClick={() => makePrimary(idx)}>
+                          Make primary
+                        </button>
+                      )}
+                      {addresses.length > 1 && (
+                        <button type="button" className="ui-btn" onClick={() => removeAddress(idx)}>
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="md:col-span-3">
+                      <input
+                        className="ui-input"
+                        placeholder="Street"
+                        value={addr.street}
+                        onChange={(e) => updateAddress(idx, { street: e.target.value })}
+                      />
+                    </div>
+
+                    <input
+                      className="ui-input"
+                      placeholder="Unit"
+                      value={addr.unit}
+                      onChange={(e) => updateAddress(idx, { unit: e.target.value })}
+                    />
+
+                    <div className="md:col-span-2">
+                      <input
+                        className="ui-input"
+                        placeholder="Municipality"
+                        value={addr.municipality}
+                        onChange={(e) => updateAddress(idx, { municipality: e.target.value })}
+                      />
+                    </div>
+
+                    <select
+                      className="ui-select"
+                      value={addr.province}
+                      onChange={(e) => updateAddress(idx, { province: e.target.value })}
+                    >
+                      {PROVINCES.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+
+                    <input
+                      className="ui-input"
+                      placeholder="Postal code"
+                      value={addr.postalCode}
+                      onChange={(e) => updateAddress(idx, { postalCode: e.target.value })}
+                    />
+
+                    <div className="md:col-span-4">
+                      <input
+                        className="ui-input"
+                        placeholder="Address Notes"
+                        value={addr.addressNotes}
+                        onChange={(e) => updateAddress(idx, { addressNotes: e.target.value })}
+                      />
+                    </div>
+                  </div>
                 </div>
+              ))}
 
-                <input
-                  className="ui-input"
-                  placeholder="Unit"
-                  value={addresses[0].unit}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setAddresses((prev) => [{ ...prev[0], unit: v }]);
-                  }}
-                />
-
-                <div className="md:col-span-2">
-                  <input
-                    className="ui-input"
-                    placeholder="Municipality"
-                    value={addresses[0].municipality}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setAddresses((prev) => [{ ...prev[0], municipality: v }]);
-                    }}
-                  />
-                </div>
-
-                <select
-                  className="ui-select"
-                  value={addresses[0].province}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setAddresses((prev) => [{ ...prev[0], province: v }]);
-                  }}
-                >
-                  {PROVINCES.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-
-                <input
-                  className="ui-input"
-                  placeholder="Postal code"
-                  value={addresses[0].postalCode}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setAddresses((prev) => [{ ...prev[0], postalCode: v }]);
-                  }}
-                />
-
-                <div className="md:col-span-4">
-                  <input
-                    className="ui-input"
-                    placeholder="Address Notes"
-                    value={addresses[0].addressNotes}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setAddresses((prev) => [{ ...prev[0], addressNotes: v }]);
-                    }}
-                  />
-                </div>
-              </div>
-
-              <button type="button" className="ui-btn" disabled>
+              <button type="button" className="ui-btn" onClick={addAddress}>
                 + Address
               </button>
+
               <div className="text-xs text-gray-500">
-                (Multiple addresses + billing/service toggle is next — UI is staged here.)
+                Tip: "Make primary" controls which address is used for the legacy `address` field.
               </div>
             </div>
 

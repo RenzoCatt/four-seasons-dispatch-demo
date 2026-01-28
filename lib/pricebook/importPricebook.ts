@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma, PricingTier } from "@prisma/client";
+import { Prisma, PricingTier, PriceTier } from "@prisma/client";
 
 type Decimal = Prisma.Decimal;
 
@@ -21,7 +21,7 @@ interface ParsedRow {
   category: string;
   code: string;
   name: string;
-  tier: PricingTier;
+  tier: PriceTier;
   unitPrice: Decimal;
   hours?: Decimal;
   equipment?: Decimal;
@@ -112,7 +112,7 @@ function parseCSV(csvText: string): { rows: ParsedRow[]; errors: string[] } {
       });
 
       // Validate tier
-      const tier = row["tier"]?.toUpperCase() as PricingTier;
+      const tier = row["tier"]?.toUpperCase() as PriceTier;
       if (!["MEMBER", "STANDARD", "RUMI"].includes(tier)) {
         errors.push(`Line ${i + 1}: Invalid tier "${row["tier"]}"`);
         continue;
@@ -210,28 +210,71 @@ export async function importPricebook(options: ImportOptions): Promise<ImportRes
           );
         }
 
-        const itemData = {
-          uploadId,
-          sheet: firstRow.sheet,
-          category: firstRow.category,
-          code: firstRow.code,
-          name: firstRow.name,
-          description: firstRow.description || null,
-          taxableDefault: true,
-          hours: firstRow.hours || null,
-          equipment: firstRow.equipment || null,
-          hourlyRate: firstRow.hourlyRate || null,
-          materialMarkUp: firstRow.materialMarkUp || null,
-        };
+        // Upsert industry from sheet name
+        const industry = await tx.pricebookIndustry.upsert({
+          where: { name: firstRow.sheet },
+          update: {},
+          create: { 
+            name: firstRow.sheet, 
+            sortOrder: 0 
+          },
+        });
 
-        const item = await tx.priceBookItem.create({ data: itemData });
-        result.itemsCreated++;
+        // Upsert category under industry
+        const category = await tx.pricebookCategory.upsert({
+          where: {
+            industryId_name: {
+              industryId: industry.id,
+              name: firstRow.category,
+            },
+          },
+          update: {},
+          create: {
+            industryId: industry.id,
+            name: firstRow.category,
+            sortOrder: 0,
+          },
+        });
 
-        // Item created
+        // Upsert item under category
+        const existingItem = await tx.pricebookItemNew.findUnique({
+          where: {
+            categoryId_code: {
+              categoryId: category.id,
+              code: firstRow.code,
+            },
+          },
+        });
+
+        const item = await tx.pricebookItemNew.upsert({
+          where: {
+            categoryId_code: {
+              categoryId: category.id,
+              code: firstRow.code,
+            },
+          },
+          update: {
+            name: firstRow.name,
+            description: firstRow.description || null,
+          },
+          create: {
+            categoryId: category.id,
+            code: firstRow.code,
+            name: firstRow.name,
+            description: firstRow.description || null,
+            sortOrder: 0,
+          },
+        });
+
+        if (existingItem) {
+          result.itemsUpdated++;
+        } else {
+          result.itemsCreated++;
+        }
 
         // Upsert rates for each tier in this item
         for (const row of itemRows) {
-          const existingRate = await tx.priceBookRate.findUnique({
+          const existingRate = await tx.pricebookRateNew.findUnique({
             where: {
               itemId_tier: {
                 itemId: item.id,
@@ -240,7 +283,7 @@ export async function importPricebook(options: ImportOptions): Promise<ImportRes
             },
           });
 
-          await tx.priceBookRate.upsert({
+          await tx.pricebookRateNew.upsert({
             where: {
               itemId_tier: {
                 itemId: item.id,
@@ -251,9 +294,17 @@ export async function importPricebook(options: ImportOptions): Promise<ImportRes
               itemId: item.id,
               tier: row.tier,
               unitPrice: row.unitPrice,
+              hours: row.hours || null,
+              equipment: row.equipment || null,
+              hourlyRate: row.hourlyRate || null,
+              materialMarkup: row.materialMarkUp || null,
             },
             update: {
               unitPrice: row.unitPrice,
+              hours: row.hours || null,
+              equipment: row.equipment || null,
+              hourlyRate: row.hourlyRate || null,
+              materialMarkup: row.materialMarkUp || null,
             },
           });
 

@@ -207,7 +207,7 @@ model PriceBookRate {
 
 model PricebookIndustry {
   id         String              @id @default(uuid())
-  name       String
+  name       String              @unique
   sortOrder  Int                 @default(0)
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
@@ -227,6 +227,7 @@ model PricebookCategory {
   children   PricebookCategory[] @relation("CategoryTree")
   items      PricebookItemNew[]
 
+  @@unique([industryId, name])
   @@index([industryId])
   @@index([parentId])
 }
@@ -244,6 +245,7 @@ model PricebookItemNew {
   category    PricebookCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   rates       PricebookRateNew[]
 
+  @@unique([categoryId, code])
   @@index([categoryId])
   @@index([name])
 }
