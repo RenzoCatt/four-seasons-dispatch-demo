@@ -1,6 +1,14 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
+export const runtime = "nodejs";
+
+const db = process.env.DATABASE_URL || "";
+const direct = process.env.DIRECT_URL || "";
+
+console.error("DATABASE_URL host:", db.split("@")[1]?.split("/")[0] || "(missing)");
+console.error("DIRECT_URL host:", direct.split("@")[1]?.split("/")[0] || "(missing)");
+
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 // Debug log for Vercel
