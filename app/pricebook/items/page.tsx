@@ -34,19 +34,42 @@ function PricebookItemsContent() {
   const [selected, setSelected] = useState<Item | null>(null);
 
   async function load() {
-    const url =
-      q.trim().length > 0
-        ? `/api/pricebook/items?q=${encodeURIComponent(q.trim())}`
-        : `/api/pricebook/items?categoryId=${encodeURIComponent(categoryId || "")}`;
+    const hasQ = q.trim().length > 0;
+    const hasCategory = Boolean(categoryId && categoryId.trim().length > 0);
 
+    const url = hasQ
+      ? `/api/pricebook/items?q=${encodeURIComponent(q.trim())}`
+      : hasCategory
+        ? `/api/pricebook/items?categoryId=${encodeURIComponent(categoryId!)}`
+        : `/api/pricebook/items`; // Load everything
+
+    console.log("Loading items from:", url);
     const res = await fetch(url, { cache: "no-store" });
-    const data = await res.json();
+    console.log("Response status:", res.status);
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error("Pricebook items load failed:", res.status, text);
+      alert(`Load failed (${res.status}). Check console/network.`);
+      setItems([]);
+      return;
+    }
+
+    const data = await res.json().catch(() => null);
+    console.log("Received data:", data);
     setItems(Array.isArray(data) ? data : []);
   }
 
+  useEffect(() => {
+    setQ(sp.get("q") || "");
+  }, [sp]);
+
   useEffect(() => { load(); }, [categoryId]);
 
-  const rows = useMemo(() => items, [items]);
+  const rows = useMemo(() => {
+    console.log("Items loaded:", items.length, items);
+    return items;
+  }, [items]);
 
   function ensureTierRates(item: Item): Item {
     const map = new Map(item.rates.map((r) => [r.tier, r]));

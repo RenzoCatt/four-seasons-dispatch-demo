@@ -3,22 +3,38 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-// GET distinct sheets from PriceBookItem
+// GET distinct industries (sheets) from PricebookIndustry
 export async function GET() {
   try {
-    const sheets = await prisma.priceBookItem.groupBy({
-      by: ["sheet"],
-      _count: {
-        id: true,
+    const industries = await prisma.pricebookIndustry.findMany({
+      include: {
+        _count: {
+          select: {
+            categories: {
+              where: {
+                items: {
+                  some: {},
+                },
+              },
+            },
+          },
+        },
+        categories: {
+          include: {
+            _count: {
+              select: { items: true },
+            },
+          },
+        },
       },
       orderBy: {
-        sheet: "asc",
+        name: "asc",
       },
     });
 
-    const result = sheets.map((s) => ({
-      sheet: s.sheet,
-      count: s._count.id,
+    const result = industries.map((industry) => ({
+      sheet: industry.name,
+      count: industry.categories.reduce((sum, cat) => sum + cat._count.items, 0),
     }));
 
     return NextResponse.json(result);

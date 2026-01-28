@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-// GET items for a sheet + category
+// GET items for an industry (sheet) + category
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ sheet: string; category: string }> }
@@ -15,37 +15,44 @@ export async function GET(
     const category = decodeURIComponent(categoryParam);
     const q = (searchParams.get("q") || "").trim();
 
-    const items = await prisma.priceBookItem.findMany({
+    // Find the category by industry name and category name
+    const categoryRecord = await prisma.pricebookCategory.findFirst({
       where: {
-        sheet: sheet,
-        category: category,
-        ...(q
-          ? {
-              OR: [
-                { name: { contains: q, mode: "insensitive" } },
-                { code: { contains: q, mode: "insensitive" } },
-              ],
-            }
-          : {}),
+        name: category,
+        industry: {
+          name: sheet,
+        },
       },
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        description: true,
-        rates: {
-          select: {
-            tier: true,
-            unitPrice: true,
+      include: {
+        items: {
+          where: q
+            ? {
+                OR: [
+                  { name: { contains: q, mode: "insensitive" } },
+                  { code: { contains: q, mode: "insensitive" } },
+                ],
+              }
+            : {},
+          include: {
+            rates: {
+              select: {
+                tier: true,
+                unitPrice: true,
+              },
+            },
+          },
+          orderBy: {
+            code: "asc",
           },
         },
       },
-      orderBy: {
-        code: "asc",
-      },
     });
 
-    return NextResponse.json(items);
+    if (!categoryRecord) {
+      return NextResponse.json([]);
+    }
+
+    return NextResponse.json(categoryRecord.items);
   } catch (error) {
     console.error("Error fetching items:", error);
     return NextResponse.json({ error: "Failed to fetch items" }, { status: 500 });

@@ -3,28 +3,33 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-// GET categories for a sheet
+// GET categories for an industry (sheet)
 export async function GET(req: Request, { params }: { params: Promise<{ sheet: string }> }) {
   try {
     const { sheet: sheetParam } = await params;
     const sheet = decodeURIComponent(sheetParam);
 
-    const categories = await prisma.priceBookItem.groupBy({
-      by: ["category"],
-      where: {
-        sheet: sheet,
-      },
-      _count: {
-        id: true,
-      },
-      orderBy: {
-        category: "asc",
+    const industry = await prisma.pricebookIndustry.findFirst({
+      where: { name: sheet },
+      include: {
+        categories: {
+          include: {
+            _count: {
+              select: { items: true },
+            },
+          },
+          orderBy: { name: "asc" },
+        },
       },
     });
 
-    const result = categories.map((c) => ({
-      category: c.category,
-      count: c._count.id,
+    if (!industry) {
+      return NextResponse.json([]);
+    }
+
+    const result = industry.categories.map((c) => ({
+      category: c.name,
+      count: c._count.items,
     }));
 
     return NextResponse.json(result);

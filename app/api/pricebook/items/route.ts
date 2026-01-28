@@ -8,28 +8,32 @@ export async function GET(req: Request) {
   const categoryId = searchParams.get("categoryId");
   const q = (searchParams.get("q") || "").trim();
 
-  if (!categoryId && !q) {
-    return NextResponse.json({ error: "categoryId or q required" }, { status: 400 });
+  console.log("API query params:", { categoryId, q });
+
+  try {
+    const items = await prisma.pricebookItemNew.findMany({
+      where: {
+        ...(categoryId ? { categoryId } : {}),
+        ...(q
+          ? {
+              OR: [
+                { name: { contains: q, mode: "insensitive" } },
+                { code: { contains: q, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
+      include: { rates: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      take: q ? 100 : undefined,
+    });
+
+    console.log("Found items:", items.length);
+    return NextResponse.json(items);
+  } catch (error) {
+    console.error("Query error:", error);
+    return NextResponse.json({ error: String(error) }, { status: 500 });
   }
-
-  const items = await prisma.pricebookItemNew.findMany({
-    where: {
-      ...(categoryId ? { categoryId } : {}),
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q, mode: "insensitive" } },
-              { code: { contains: q, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-    },
-    include: { rates: true },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    take: q ? 100 : undefined,
-  });
-
-  return NextResponse.json(items);
 }
 
 export async function POST(req: Request) {
