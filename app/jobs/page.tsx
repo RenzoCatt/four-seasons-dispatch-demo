@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import TopSearch from "../components/TopSearch";
 import { Technician } from "@/lib/store";
@@ -23,7 +23,7 @@ type WorkOrder = {
   createdAt: string;
 };
 
-export default function JobsPage() {
+function JobsPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const q = (searchParams.get("q") ?? "").toLowerCase();
@@ -233,5 +233,13 @@ function StatusColumn({
         {items.length === 0 && <div className="ui-muted">No jobs in this column.</div>}
       </div>
     </div>
+  );
+}
+
+export default function JobsPage() {
+  return (
+    <Suspense fallback={<div className="ui-page">Loading...</div>}>
+      <JobsPageContent />
+    </Suspense>
   );
 }

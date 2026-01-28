@@ -170,6 +170,8 @@ export async function PATCH(
     },
   });
 
+  if (!refetched) return new NextResponse("Customer not found", { status: 404 });
+
   // Flatten response
   const shaped = {
     id: refetched.id,

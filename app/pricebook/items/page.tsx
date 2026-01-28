@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 type Tier = "STANDARD" | "MEMBER" | "RUMI";
@@ -26,7 +26,7 @@ type Item = {
 
 const TIERS: Tier[] = ["STANDARD", "MEMBER", "RUMI"];
 
-export default function PricebookItemsPage() {
+function PricebookItemsContent() {
   const sp = useSearchParams();
   const categoryId = sp.get("categoryId");
   const [q, setQ] = useState(sp.get("q") || "");
@@ -239,5 +239,13 @@ export default function PricebookItemsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PricebookItemsPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading...</div>}>
+      <PricebookItemsContent />
+    </Suspense>
   );
 }

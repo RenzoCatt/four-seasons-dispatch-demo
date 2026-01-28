@@ -306,9 +306,9 @@ export async function GET(
       notes: (invoice as any).notes ?? null,
     });
 
-    const buf = await pdf(doc).toBuffer();
+    const blob = await pdf(doc).toBlob();
 
-    return new NextResponse(buf, {
+    return new Response(blob, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename="invoice-${invoice.invoiceNumber}.pdf"`,

@@ -74,7 +74,7 @@ async function main() {
     }
 
     // optional: clean notes by removing the JSON blob, keep the human text above it
-    const cleaned = c.notes.split("\n---\n")[0]?.trim() || null;
+    const cleaned = c.notes?.split("\n---\n")[0]?.trim() || null;
     await prisma.customer.update({ where: { id: c.id }, data: { notes: cleaned } });
   }
 }

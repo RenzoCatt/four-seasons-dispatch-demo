@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import TopSearch from "../components/TopSearch";
@@ -15,7 +15,7 @@ type Customer = {
   notes?: string;
 };
 
-export default function CustomersListPage() {
+function CustomersListContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const q = (searchParams.get("q") ?? "").toLowerCase();
@@ -142,5 +142,13 @@ useEffect(() => {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CustomersListPage() {
+  return (
+    <Suspense fallback={<div className="ui-page">Loading...</div>}>
+      <CustomersListContent />
+    </Suspense>
   );
 }
