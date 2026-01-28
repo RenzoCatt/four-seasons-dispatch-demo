@@ -235,7 +235,7 @@ model PricebookCategory {
 model PricebookItemNew {
   id          String             @id @default(uuid())
   categoryId  String
-  code        String?
+  code        String
   name        String
   description String?
   unit        String?
