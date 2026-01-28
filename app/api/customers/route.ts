@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-console.log("DB HOST CHECK:", (process.env.DATABASE_URL || "").split("@")[1]?.split("/")[0]);
+console.error("DB HOST CHECK (DATABASE_URL):", (process.env.DATABASE_URL || "").split("@")[1]?.split("/")[0]);
+console.error("DB HOST CHECK (DIRECT_URL):", (process.env.DIRECT_URL || "").split("@")[1]?.split("/")[0]);
 
 export async function GET() {
   const customers = await prisma.customer.findMany({
