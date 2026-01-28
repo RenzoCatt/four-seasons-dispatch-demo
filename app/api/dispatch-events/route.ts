@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { DispatchEvent } from "@prisma/client";
 
+export const runtime = "nodejs";
+
 function startOfWeekMonday(d: Date) {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
