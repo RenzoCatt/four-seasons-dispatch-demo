@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { DispatchEvent } from "@prisma/client";
 
 function startOfWeekMonday(d: Date) {
   const x = new Date(d);
@@ -41,7 +42,7 @@ export async function GET(req: Request) {
   });
 
   return NextResponse.json(
-    events.map((e) => ({
+    events.map((e: DispatchEvent) => ({
       id: e.id,
       workOrderId: e.workOrderId,
       techId: e.techId,
