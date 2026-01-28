@@ -34,17 +34,22 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const categoryId = String(body?.categoryId || "");
+  const categoryId = String(body?.categoryId || "").trim();
   const name = String(body?.name || "").trim();
+  const code = String(body?.code || "").trim();
 
   if (!categoryId || !name) {
     return NextResponse.json({ error: "categoryId + name required" }, { status: 400 });
   }
 
+  if (!code) {
+    return NextResponse.json({ error: "code required" }, { status: 400 });
+  }
+
   const created = await prisma.pricebookItemNew.create({
     data: {
       categoryId,
-      code: body?.code ? String(body.code).trim() : null,
+      code,
       name,
       description: body?.description ? String(body.description) : null,
       unit: body?.unit ? String(body.unit) : null,
