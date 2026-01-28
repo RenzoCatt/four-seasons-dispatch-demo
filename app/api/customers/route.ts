@@ -45,38 +45,39 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const body = await req.json();
+  try {
+    const body = await req.json();
 
-  // Accept both legacy and expanded payloads
-  const name = body.name || body.displayName || "";
-  const address = body.address || (body.addresses && body.addresses[0] && body.addresses[0].street) || "";
-  if (!name || !address) {
-    return new NextResponse("Missing required fields", { status: 400 });
-  }
+    // Accept both legacy and expanded payloads
+    const name = body.name || body.displayName || "";
+    const address = body.address || (body.addresses && body.addresses[0] && body.addresses[0].street) || "";
+    if (!name || !address) {
+      return new NextResponse("Missing required fields: name and address", { status: 400 });
+    }
 
-  // Expanded fields
-  const {
-    firstName,
-    lastName,
-    displayName,
-    company,
-    role,
-    customerType,
-    emails = [],
-    phones = [],
-    addresses = [],
-    tags = [],
-    notes,
-    phone,
-    email,
-    locationName,
-    createWorkOrderNow,
-    workOrderDescription,
-  } = body;
+    // Expanded fields
+    const {
+      firstName,
+      lastName,
+      displayName,
+      company,
+      role,
+      customerType,
+      emails = [],
+      phones = [],
+      addresses = [],
+      tags = [],
+      notes,
+      phone,
+      email,
+      locationName,
+      createWorkOrderNow,
+      workOrderDescription,
+    } = body;
 
-  // Step 1: Create customer
-  // Step 1: Create customer (legacy fields only)
-  const created = await prisma.customer.create({
+    // Step 1: Create customer
+    // Step 1: Create customer (legacy fields only)
+    const created = await prisma.customer.create({
     data: {
       name,
       phone: phone || null,
@@ -179,4 +180,8 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json(created, { status: 201 });
+  } catch (err: any) {
+    console.error("Failed to create customer:", err);
+    return new NextResponse(`Failed to create customer: ${err?.message || err}`, { status: 500 });
+  }
 }

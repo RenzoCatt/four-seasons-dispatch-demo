@@ -802,9 +802,9 @@ HVAC,Water Shutoff,WHR540,Moen Whole House shut off,RUMI,1683.06,0.9,589.00,865.
 HVAC,Water Shutoff,WHR563,Water buzzer,MEMBER,51.51,0.02,29.95,865.00,39.93,Supply and leave 1 - water buzzer for detecting water leaks
 HVAC,Water Shutoff,WHR563,Water buzzer,STANDARD,57.23,0.02,29.95,865.00,39.93,Supply and leave 1 - water buzzer for detecting water leaks
 HVAC,Water Shutoff,WHR563,Water buzzer,RUMI,63.59,0.02,29.95,865.00,39.93,Supply and leave 1 - water buzzer for detecting water leaks
-HVAC,You Know the Cost Up Front…That Saves You Money!,WHR563,Water buzzer (multiples) Pricing is each,MEMBER,43.72,0.01,29.95,865.00,39.93,Supply and leave 1 - water buzzer for detecting water leaks
-HVAC,You Know the Cost Up Front…That Saves You Money!,WHR563,Water buzzer (multiples) Pricing is each,STANDARD,48.58,0.01,29.95,865.00,39.93,Supply and leave 1 - water buzzer for detecting water leaks
-HVAC,You Know the Cost Up Front…That Saves You Money!,WHR563,Water buzzer (multiples) Pricing is each,RUMI,53.98,0.01,29.95,865.00,39.93,Supply and leave 1 - water buzzer for detecting water leaks
+HVAC,Water Shutoff,WHR563,Water buzzer (multiples) Pricing is each,MEMBER,43.72,0.01,29.95,865.00,39.93,Supply and leave 1 - water buzzer for detecting water leaks
+HVAC,Water Shutoff,WHR563,Water buzzer (multiples) Pricing is each,STANDARD,48.58,0.01,29.95,865.00,39.93,Supply and leave 1 - water buzzer for detecting water leaks
+HVAC,Water Shutoff,WHR563,Water buzzer (multiples) Pricing is each,RUMI,53.98,0.01,29.95,865.00,39.93,Supply and leave 1 - water buzzer for detecting water leaks
 HVAC,Water Heater Repairs,WHR304,Flush Tankless Water heater,MEMBER,407.25,0.5,15.00,865.00,20.00,Connect pump and flush tankless for 15 mins with solution
 HVAC,Water Heater Repairs,WHR304,Flush Tankless Water heater,STANDARD,452.50,0.5,15.00,865.00,20.00,Connect pump and flush tankless for 15 mins with solution
 HVAC,Water Heater Repairs,WHR304,Flush Tankless Water heater,RUMI,502.78,0.5,15.00,865.00,20.00,Connect pump and flush tankless for 15 mins with solution
@@ -844,12 +844,12 @@ HVAC,Water Heater Repairs,WHR354,Water Heater Anode Replacement,RUMI,752.30,0.75
 HVAC,Water Heater Repairs,WHR500,Electric Water Heater Diagnostic Service,MEMBER,194.63,0.25,0.00,865.00,0.00,Locate heater problem with electronic tester. (Excludes replacement of electrical parts.)
 HVAC,Water Heater Repairs,WHR500,Electric Water Heater Diagnostic Service,STANDARD,216.25,0.25,0.00,865.00,0.00,Locate heater problem with electronic tester. (Excludes replacement of electrical parts.)
 HVAC,Water Heater Repairs,WHR500,Electric Water Heater Diagnostic Service,RUMI,240.28,0.25,0.00,865.00,0.00,Locate heater problem with electronic tester. (Excludes replacement of electrical parts.)
-HVAC,You Know the Cost Up Front…That Saves You Money!,WHR500,Replace Dip Tube (using shark bite coupler),MEMBER,439.32,0.441,80.00,865.00,106.67,Replace dip tube on hot water tank with no access on water lines
-HVAC,You Know the Cost Up Front…That Saves You Money!,WHR500,Replace Dip Tube (using shark bite coupler),STANDARD,488.13,0.441,80.00,865.00,106.67,Replace dip tube on hot water tank with no access on water lines
-HVAC,You Know the Cost Up Front…That Saves You Money!,WHR500,Replace Dip Tube (using shark bite coupler),RUMI,542.37,0.441,80.00,865.00,106.67,Replace dip tube on hot water tank with no access on water lines
-HVAC,You Know the Cost Up Front…That Saves You Money!,CSP190,Replace Sump Pump,MEMBER,583.88,0.75,150.00,865.00,,Remove existing & install supplied sump pump.
-HVAC,You Know the Cost Up Front…That Saves You Money!,CSP190,Replace Sump Pump,STANDARD,648.75,0.75,150.00,865.00,,Remove existing & install supplied sump pump.
-HVAC,You Know the Cost Up Front…That Saves You Money!,CSP190,Replace Sump Pump,RUMI,720.83,0.75,150.00,865.00,,Remove existing & install supplied sump pump.
+HVAC,Water Heater Repairs,WHR500,Replace Dip Tube (using shark bite coupler),MEMBER,439.32,0.441,80.00,865.00,106.67,Replace dip tube on hot water tank with no access on water lines
+HVAC,Water Heater Repairs,WHR500,Replace Dip Tube (using shark bite coupler),STANDARD,488.13,0.441,80.00,865.00,106.67,Replace dip tube on hot water tank with no access on water lines
+HVAC,Water Heater Repairs,WHR500,Replace Dip Tube (using shark bite coupler),RUMI,542.37,0.441,80.00,865.00,106.67,Replace dip tube on hot water tank with no access on water lines
+HVAC,Water Heater Repairs,CSP190,Replace Sump Pump,MEMBER,583.88,0.75,150.00,865.00,,Remove existing & install supplied sump pump.
+HVAC,Water Heater Repairs,CSP190,Replace Sump Pump,STANDARD,648.75,0.75,150.00,865.00,,Remove existing & install supplied sump pump.
+HVAC,Water Heater Repairs,CSP190,Replace Sump Pump,RUMI,720.83,0.75,150.00,865.00,,Remove existing & install supplied sump pump.
 HVAC,Radiant Heater,ACR0240,Replace cracked or rotting tube,MEMBER,1579.89,1.6,260.00,865.00,371.43,Replace 10' of tube (scissor lift not included)
 HVAC,Radiant Heater,ACR0240,Replace cracked or rotting tube,STANDARD,1755.43,1.6,260.00,865.00,371.43,Replace 10' of tube (scissor lift not included)
 HVAC,Radiant Heater,ACR0240,Replace cracked or rotting tube,RUMI,1950.48,1.6,260.00,865.00,371.43,Replace 10' of tube (scissor lift not included)
