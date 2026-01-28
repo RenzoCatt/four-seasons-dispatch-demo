@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const runtime = "nodejs";
+
+console.log("ENV CHECK", {
+  DATABASE_URL_HOST: (process.env.DATABASE_URL || "").split("@")[1]?.split("/")[0],
+  DIRECT_URL_HOST: (process.env.DIRECT_URL || "").split("@")[1]?.split("/")[0],
+});
+
 export async function GET() {
   const customers = await prisma.customer.findMany({
     orderBy: { name: "asc" },
