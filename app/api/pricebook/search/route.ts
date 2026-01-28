@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { PricingTier } from "@prisma/client";
+import { PriceTier } from "@prisma/client";
 
 export const runtime = "nodejs";
 
@@ -8,30 +8,19 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const q = searchParams.get("q") || "";
-    const sheet = searchParams.get("sheet") || "";
+    const industry = searchParams.get("sheet") || ""; // "sheet" param maps to industry
     const limitParam = searchParams.get("limit");
     const limit = limitParam ? parseInt(limitParam, 10) : 100;
 
-    // Get active upload
-    const activeUpload = await prisma.priceBookUpload.findFirst({
-      where: { isActive: true },
-    });
-
-    if (!activeUpload) {
-      return NextResponse.json({
-        success: false,
-        message: "No active price book found",
-        data: [],
-      });
-    }
-
     // Build where clause for filtering
-    const where: any = {
-      uploadId: activeUpload.id,
-    };
+    const where: any = {};
 
-    if (sheet) {
-      where.sheet = sheet;
+    if (industry) {
+      where.category = {
+        industry: {
+          name: { equals: industry, mode: "insensitive" },
+        },
+      };
     }
 
     if (q) {
@@ -39,24 +28,29 @@ export async function GET(request: NextRequest) {
         { code: { contains: q, mode: "insensitive" } },
         { name: { contains: q, mode: "insensitive" } },
         { description: { contains: q, mode: "insensitive" } },
-        { category: { contains: q, mode: "insensitive" } },
+        { category: { name: { contains: q, mode: "insensitive" } } },
       ];
     }
 
     // Fetch items with all rates
-    const items = await prisma.priceBookItem.findMany({
+    const items = await prisma.pricebookItemNew.findMany({
       where,
       include: {
         rates: true,
+        category: {
+          include: {
+            industry: true,
+          },
+        },
       },
-      orderBy: [{ category: "asc" }, { code: "asc" }],
+      orderBy: [{ name: "asc" }],
       take: limit,
     });
 
     // Map to flat array with all rates
     const resultItems = items.map((item) => {
       // Build rates object with all available tiers
-      const rates: Partial<Record<PricingTier, number>> = {};
+      const rates: Partial<Record<PriceTier, number>> = {};
       for (const rate of item.rates) {
         rates[rate.tier] = parseFloat(rate.unitPrice.toString());
       }
@@ -66,16 +60,16 @@ export async function GET(request: NextRequest) {
 
       return {
         id: item.id,
-        category: item.category,
+        category: item.category.name,
         code: item.code,
         name: item.name,
         description: item.description,
-        sheet: item.sheet,
-        taxableDefault: item.taxableDefault,
-        hours: item.hours?.toString() || null,
-        equipment: item.equipment?.toString() || null,
-        hourlyRate: item.hourlyRate?.toString() || null,
-        materialMarkUp: item.materialMarkUp?.toString() || null,
+        sheet: item.category.industry.name,
+        taxableDefault: true, // Default for now
+        hours: item.rates[0]?.hours?.toString() || null,
+        equipment: item.rates[0]?.equipment?.toString() || null,
+        hourlyRate: item.rates[0]?.hourlyRate?.toString() || null,
+        materialMarkUp: item.rates[0]?.materialMarkup?.toString() || null,
         unitPrice: displayPrice,
         rates, // All available rates
       };
@@ -83,11 +77,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      activeUpload: {
-        id: activeUpload.id,
-        filename: activeUpload.filename,
-        effectiveDate: activeUpload.effectiveDate,
-      },
       items: resultItems,
     });
   } catch (error) {

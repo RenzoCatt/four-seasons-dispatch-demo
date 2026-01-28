@@ -1,0 +1,6 @@
+sheet,category,code,name,tier,unit_price,hours,equipment,hourly_rate,material_mark_up,description
+HVAC,Service and Refrigerant Adjustment,ACR0205,Clean Evaporator Coil (In Place),MEMBER,620.15,0.75,26.20,865.00,40.31,"Clean evaporator in place using a foaming self rinsing cleaner, brush & vacuum."
+HVAC,Service and Refrigerant Adjustment,ACR0205,Clean Evaporator Coil (In Place),STANDARD,689.06,0.75,26.20,865.00,40.31,"Clean evaporator in place using a foaming self rinsing cleaner, brush & vacuum."
+HVAC,Service and Refrigerant Adjustment,ACR0205,Clean Evaporator Coil (In Place),RUMI,765.62,0.75,26.20,865.00,40.31,"Clean evaporator in place using a foaming self rinsing cleaner, brush & vacuum."
+HVAC,Service and Refrigerant Adjustment,ACR0210,Clean Evaporator Coil (Remove),MEMBER,863.24,1,61.20,865.00,94.15,Clean evaporator by removing from plenum and cleaning. With coil still connected to refrigerant lines and pressurized.
+HVAC,Service and Refrigerant Adjustment,ACR0210,Clean Evaporator Coil (Remove),STANDARD,959.15,1,61.20,865.00,94.15,Clean evaporator by removing from plenum and cleaning. With coil still connected to refrigerant lines and pressurized.

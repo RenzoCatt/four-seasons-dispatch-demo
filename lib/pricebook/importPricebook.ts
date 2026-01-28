@@ -189,10 +189,11 @@ export async function importPricebook(options: ImportOptions): Promise<ImportRes
     itemsByIdentity.get(key)!.push(row);
   }
 
-  // Process each item in a transaction
+  // Process each item individually (not in one big transaction to avoid timeouts)
   try {
-    await prisma.$transaction(async (tx) => {
-      for (const [key, itemRows] of itemsByIdentity.entries()) {
+    for (const [key, itemRows] of itemsByIdentity.entries()) {
+      try {
+        await prisma.$transaction(async (tx) => {
         // Use first row for item-level data (rows for same identity share item data)
         const firstRow = itemRows[0];
 
@@ -314,12 +315,17 @@ export async function importPricebook(options: ImportOptions): Promise<ImportRes
             result.ratesCreated++;
           }
         }
+        }, {
+          timeout: 10000, // 10 seconds per item
+        });
+      } catch (itemError) {
+        result.errors.push(
+          `Item ${key}: ${itemError instanceof Error ? itemError.message : String(itemError)}`
+        );
       }
-    }, {
-      timeout: 60000, // 60 seconds for large imports
-    });
+    }
   } catch (error) {
-    result.errors.push(`Transaction error: ${error instanceof Error ? error.message : String(error)}`);
+    result.errors.push(`Import error: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   return result;

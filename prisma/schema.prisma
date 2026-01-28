@@ -258,7 +258,7 @@ model PricebookRateNew {
   hours          Decimal?         @db.Decimal(10, 2)
   hourlyRate     Decimal?         @db.Decimal(12, 2)
   equipment      Decimal?         @db.Decimal(12, 2)
-  materialMarkup Decimal?         @db.Decimal(5, 2)
+  materialMarkup Decimal?         @db.Decimal(10, 2)
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   item           PricebookItemNew @relation(fields: [itemId], references: [id], onDelete: Cascade)
