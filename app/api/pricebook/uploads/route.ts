@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { importPricebook } from "@/lib/pricebook/importPricebook";
 import crypto from "crypto";
 
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();

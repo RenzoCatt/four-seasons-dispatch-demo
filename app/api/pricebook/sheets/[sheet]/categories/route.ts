@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const runtime = "nodejs";
+
 // GET categories for a sheet
 export async function GET(req: Request, { params }: { params: Promise<{ sheet: string }> }) {
   try {

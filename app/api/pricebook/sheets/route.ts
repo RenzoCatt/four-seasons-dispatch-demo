@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const runtime = "nodejs";
+
 // GET distinct sheets from PriceBookItem
 export async function GET() {
   try {

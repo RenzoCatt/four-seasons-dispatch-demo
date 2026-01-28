@@ -1,6 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
+// Prevent Edge runtime execution
+if (process.env.NEXT_RUNTIME === "edge") {
+  throw new Error("❌ Prisma is running in Edge runtime");
+}
+
 declare global {
   // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined;
