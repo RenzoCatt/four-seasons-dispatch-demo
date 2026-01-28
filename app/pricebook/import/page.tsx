@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 interface ImportResult {
@@ -184,6 +185,17 @@ export default function PriceBookImportPage() {
                     ))}
                   </ul>
                 </div>
+              </div>
+            )}
+
+            {result.success && (
+              <div className="mt-4 flex gap-2 justify-end">
+                <Link
+                  href="/pricebook/services"
+                  className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  Back to Services
+                </Link>
               </div>
             )}
           </div>

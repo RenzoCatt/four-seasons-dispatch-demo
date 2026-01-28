@@ -15,6 +15,7 @@ const nav = [
   { href: "/dispatch", label: "Disptach" },
   { href: "/techs", label: "Techs" },
   { href: "/reports", label: "Reports" },
+  { href: "/pricebook/item-lookup", label: "Pricebook" },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

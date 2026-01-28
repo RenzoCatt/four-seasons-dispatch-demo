@@ -77,7 +77,7 @@ export default function InvoicePage() {
     refresh();
   }, [id]);
 
-  const canEdit = false; // invoice preview is always read-only
+  const canEdit = invoice?.status === "DRAFT";
 
   async function addItem() {
     if (!desc.trim()) return;
@@ -309,9 +309,9 @@ export default function InvoicePage() {
           <LineItemsCard
             items={invoice.lineItems}
             taxRate={0.05}
-            readOnly={true}
-            onRemove={undefined}
-            disabled={true}
+            readOnly={!canEdit}
+            onRemove={canEdit ? removeItem : undefined}
+            disabled={!canEdit || saving}
             title="Line Items"
             descriptionField="description"
             typeField="type"
@@ -320,6 +320,69 @@ export default function InvoicePage() {
             taxableField="taxable"
             moneyFormatter={money}
           />
+        )}
+
+        {canEdit && (
+          <div className="ui-item p-4">
+            <div className="font-semibold mb-3">Add Line Item</div>
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+              <div className="md:col-span-2">
+                <label className="text-xs text-gray-400">Type</label>
+                <select
+                  className="ui-input w-full mt-1"
+                  value={type}
+                  onChange={(e) => setType(e.target.value as LineItem["type"])}
+                  disabled={saving}
+                >
+                  <option value="LABOR">Labor</option>
+                  <option value="PART">Part</option>
+                  <option value="FEE">Fee</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-6">
+                <label className="text-xs text-gray-400">Description</label>
+                <input
+                  className="ui-input w-full mt-1"
+                  value={desc}
+                  onChange={(e) => setDesc(e.target.value)}
+                  placeholder="Service call labor"
+                  disabled={saving}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="text-xs text-gray-400">Qty</label>
+                <input
+                  className="ui-input w-full mt-1"
+                  type="number"
+                  min={1}
+                  value={qty}
+                  onChange={(e) => setQty(Number(e.target.value))}
+                  disabled={saving}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="text-xs text-gray-400">Unit ($)</label>
+                <input
+                  className="ui-input w-full mt-1"
+                  type="number"
+                  step="0.01"
+                  value={unit}
+                  onChange={(e) => setUnit(Number(e.target.value))}
+                  disabled={saving}
+                />
+              </div>
+            </div>
+
+            <div className="mt-3">
+              <button className="ui-btn ui-btn-primary" disabled={saving} onClick={addItem}>
+                {saving ? "Adding..." : "Add Item"}
+              </button>
+            </div>
+          </div>
         )}
 
       </div>

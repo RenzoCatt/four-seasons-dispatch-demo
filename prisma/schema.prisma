@@ -90,52 +90,51 @@ model Location {
 }
 
 model WorkOrder {
-  id            String                 @id @default(cuid())
+  id            String              @id @default(cuid())
   customerId    String
   locationId    String
   description   String?
   completedAt   DateTime?
-  createdAt     DateTime               @default(now())
-  jobNumber     Int                    @default(autoincrement())
-  updatedAt     DateTime               @updatedAt
-  status        WorkOrderStatus        @default(SCHEDULED)
+  createdAt     DateTime            @default(now())
+  jobNumber     Int                 @default(autoincrement())
+  updatedAt     DateTime            @updatedAt
+  status        WorkOrderStatus     @default(SCHEDULED)
   dispatchEvent DispatchEvent?
   invoice       Invoice?
+  customer      Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  location      Location            @relation(fields: [locationId], references: [id], onDelete: Cascade)
   lineItems     WorkOrderLineItem[]
-  customer      Customer               @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  location      Location               @relation(fields: [locationId], references: [id], onDelete: Cascade)
 }
 
 model Invoice {
-  id            String                 @id @default(cuid())
-  invoiceNumber Int                    @default(autoincrement())
+  id            String            @id @default(cuid())
+  invoiceNumber Int               @default(autoincrement())
   customerId    String
   locationId    String
-  workOrderId   String                 @unique
-  status        InvoiceStatus          @default(DRAFT)
-  subtotal      Int                    @default(0)
-  tax           Int                    @default(0)
-  total         Int                    @default(0)
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
-  publicToken   String?                @unique
+  workOrderId   String            @unique
+  status        InvoiceStatus     @default(DRAFT)
+  subtotal      Int               @default(0)
+  tax           Int               @default(0)
+  total         Int               @default(0)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  publicToken   String?           @unique
   sentAt        DateTime?
-  customer      Customer               @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  location      Location               @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  workOrder     WorkOrder              @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  customer      Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  location      Location          @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  workOrder     WorkOrder         @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
   lineItems     InvoiceLineItem[]
 }
 
 model WorkOrderLineItem {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workOrderId String
-  type        String   // "SERVICE" | "MATERIAL" | "LABOR" etc
+  type        String
   description String
-  qty         Float    @default(1)
-  unitPrice   Float    @default(0)
-  taxable     Boolean  @default(true)
-  createdAt   DateTime @default(now())
-
+  qty         Float     @default(1)
+  unitPrice   Float     @default(0)
+  taxable     Boolean   @default(true)
+  createdAt   DateTime  @default(now())
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
 }
 
@@ -166,6 +165,104 @@ model DispatchEvent {
   @@index([techId, startAt])
 }
 
+model PriceBookUpload {
+  id            String          @id @default(cuid())
+  createdAt     DateTime        @default(now())
+  filename      String
+  checksum      String
+  notes         String?
+  isActive      Boolean         @default(false)
+  effectiveDate DateTime?
+  items         PriceBookItem[]
+}
+
+model PriceBookItem {
+  id             String          @id @default(cuid())
+  uploadId       String
+  sheet          String
+  category       String
+  code           String
+  name           String
+  description    String?
+  taxableDefault Boolean         @default(true)
+  hours          Decimal?        @db.Decimal(10, 2)
+  equipment      Decimal?        @db.Decimal(10, 2)
+  hourlyRate     Decimal?        @db.Decimal(10, 2)
+  materialMarkUp Decimal?        @db.Decimal(10, 2)
+  upload         PriceBookUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  rates          PriceBookRate[]
+}
+
+model PriceBookRate {
+  id        String        @id @default(cuid())
+  itemId    String
+  tier      PricingTier
+  unitPrice Decimal       @db.Decimal(10, 2)
+  item      PriceBookItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, tier])
+}
+
+model PricebookIndustry {
+  id         String              @id @default(uuid())
+  name       String
+  sortOrder  Int                 @default(0)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  categories PricebookCategory[]
+}
+
+model PricebookCategory {
+  id         String              @id @default(uuid())
+  industryId String
+  parentId   String?
+  name       String
+  sortOrder  Int                 @default(0)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  industry   PricebookIndustry   @relation(fields: [industryId], references: [id], onDelete: Cascade)
+  parent     PricebookCategory?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children   PricebookCategory[] @relation("CategoryTree")
+  items      PricebookItemNew[]
+
+  @@index([industryId])
+  @@index([parentId])
+}
+
+model PricebookItemNew {
+  id          String             @id @default(uuid())
+  categoryId  String
+  code        String?
+  name        String
+  description String?
+  unit        String?
+  sortOrder   Int                @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  category    PricebookCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  rates       PricebookRateNew[]
+
+  @@index([categoryId])
+  @@index([name])
+}
+
+model PricebookRateNew {
+  id             String           @id @default(uuid())
+  itemId         String
+  tier           PriceTier
+  unitPrice      Decimal          @db.Decimal(12, 2)
+  hours          Decimal?         @db.Decimal(10, 2)
+  hourlyRate     Decimal?         @db.Decimal(12, 2)
+  equipment      Decimal?         @db.Decimal(12, 2)
+  materialMarkup Decimal?         @db.Decimal(5, 2)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  item           PricebookItemNew @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, tier])
+  @@index([tier])
+}
+
 enum PhoneType {
   MOBILE
   HOME
@@ -193,11 +290,11 @@ enum InvoiceStatus {
 }
 
 enum LineItemType {
-  SERVICE
-  MATERIAL
   LABOR
   PART
   FEE
+  SERVICE
+  MATERIAL
 }
 
 enum DispatchStatus {
@@ -207,48 +304,14 @@ enum DispatchStatus {
   CANCELED
 }
 
-model PriceBookUpload {
-  id            String          @id @default(cuid())
-  createdAt     DateTime        @default(now())
-  filename      String
-  checksum      String
-  notes         String?
-  isActive      Boolean         @default(false)
-  effectiveDate DateTime?
-  items         PriceBookItem[]
-}
-
-model PriceBookItem {
-  id              String           @id @default(cuid())
-  uploadId        String
-  sheet           String           // HVAC, Boiler, Plumbing
-  category        String
-  code            String
-  name            String
-  description     String?
-  taxableDefault  Boolean          @default(true)
-  hours           Decimal?         @db.Decimal(10, 2)
-  equipment       Decimal?         @db.Decimal(10, 2)
-  hourlyRate      Decimal?         @db.Decimal(10, 2)
-  materialMarkUp  Decimal?         @db.Decimal(10, 2)
-  upload          PriceBookUpload  @relation(fields: [uploadId], references: [id], onDelete: Cascade)
-  rates           PriceBookRate[]
-
-  // Allow duplicate codes; identity is random id
-}
-
-model PriceBookRate {
-  id        String        @id @default(cuid())
-  itemId    String
-  tier      PricingTier
-  unitPrice Decimal       @db.Decimal(10, 2)
-  item      PriceBookItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-
-  @@unique([itemId, tier])
-}
-
 enum PricingTier {
   MEMBER
   STANDARD
+  RUMI
+}
+
+enum PriceTier {
+  STANDARD
+  MEMBER
   RUMI
 }
