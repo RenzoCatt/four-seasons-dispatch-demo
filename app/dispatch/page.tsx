@@ -656,7 +656,7 @@ export default function DispatchPage() {
                     <button
                       className="col-span-2 ui-btn ui-btn-primary"
                       onClick={() => {
-                        router.push(`/jobs/${menuDetails.wo.id}`);
+                        router.push(`/jobs/${menuDetails.wo!.id}`);
                       }}
                     >
                       View Job
