@@ -209,7 +209,7 @@ export default function DispatchPage() {
   // event menu (for unassign)
   const [menuEvent, setMenuEvent] = useState<null | {
     id: string;
-    workOrderId: string;
+    workOrderId?: string | null;
     techId: string;
     startAt: string;
     endAt: string;
