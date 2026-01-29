@@ -32,6 +32,7 @@ type Job = {
   assignedTechId?: string | null;
   assignedStartAt?: string | null;
   assignedEndAt?: string | null;
+  assignedTech?: { id: string; name: string } | null;
 
   customer?: { name?: string; phone?: string; email?: string };
   location?: { address?: string; name?: string };
@@ -528,10 +529,17 @@ export default function JobDetailsPage() {
               </div>
 
               <div className="grid grid-cols-4 gap-3 py-3 border-b last:border-0">
-                <div className="text-gray-800">{job.assignedTechId ? "Assigned tech" : "—"}</div>
+                <div className="text-gray-800">
+                  {job.assignedTech?.name ?? (job.assignedTechId ? "Assigned" : "—")}
+                </div>
                 <div className="text-gray-700">{job.assignedTechId ? "Assigned" : "Unassigned"}</div>
                 <div className="text-gray-500">—</div>
-                <div className="text-gray-500">—</div>
+                <div className="text-gray-500">
+                  {job.assignedStartAt ? fmtDate(job.assignedStartAt) : "—"}
+                  {job.status === "COMPLETED" && job.assignedEndAt && (
+                    <div className="text-xs mt-1">End: {fmtDate(job.assignedEndAt)}</div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

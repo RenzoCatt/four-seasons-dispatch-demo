@@ -198,9 +198,6 @@ export default function DispatchPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // click-select toggles (still useful)
-  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string>("");
-
   // modal
   const [pending, setPending] = useState<PendingDrop | null>(null);
   const [modalStartTime, setModalStartTime] = useState<string>("08:00");
@@ -214,6 +211,12 @@ export default function DispatchPage() {
     startAt: string;
     endAt: string;
   }>(null);
+
+  // unscheduled work order modal
+  const [menuWorkOrderId, setMenuWorkOrderId] = useState<string | null>(null);
+
+  // tech focus
+  const [focusedTechId, setFocusedTechId] = useState<string | null>(null);
 
   const customersById = useMemo(
     () => Object.fromEntries(customers.map((c) => [c.id, c])),
@@ -242,6 +245,13 @@ export default function DispatchPage() {
 
     return { ev, wo, cust, tech };
   }, [menuEvent, events, workOrders, customersById, techsById]);
+
+  const menuWorkOrder = useMemo(() => {
+    if (!menuWorkOrderId) return null;
+    const wo = workOrders.find((w) => w.id === menuWorkOrderId) ?? null;
+    const cust = wo ? customersById[wo.customerId] : null;
+    return { wo, cust };
+  }, [menuWorkOrderId, workOrders, customersById]);
 
   async function refresh() {
     setLoading(true);
@@ -277,6 +287,11 @@ export default function DispatchPage() {
       .filter((w) => w.status !== "COMPLETED" && w.status !== "CANCELED")
       .filter((w) => !assignedWorkOrderIds.has(w.id));
   }, [workOrders, assignedWorkOrderIds]);
+
+  const visibleTechs = useMemo(() => {
+    if (!focusedTechId) return techs;
+    return techs.filter((t) => t.id === focusedTechId);
+  }, [techs, focusedTechId]);
 
   function eventsForCell(techId: string, day: Date) {
     return events
@@ -355,8 +370,6 @@ export default function DispatchPage() {
           alert(`POST failed: ${res.status}\n${text}`);
           return;
         }
-
-        setSelectedWorkOrderId("");
       } else {
         const res = await fetch(`/api/dispatch-events/${pending.eventId}`, {
           method: "PATCH",
@@ -427,12 +440,11 @@ export default function DispatchPage() {
                 <div className="text-xs text-gray-500">{unscheduled.length}</div>
               </div>
 
-              <div className="ui-muted mt-1">Click a job to select/deselect. Or drag it onto the grid.</div>
+              <div className="ui-muted mt-1">Drag a job onto the grid to schedule. Click a job for details.</div>
 
               <div className="space-y-2 mt-3">
                 {unscheduled.map((w) => {
                   const customerName = customersById[w.customerId]?.name ?? "Unknown";
-                  const selected = w.id === selectedWorkOrderId;
 
                   return (
                     <WorkOrderCard
@@ -441,8 +453,7 @@ export default function DispatchPage() {
                       workOrder={w}
                       customerName={customerName}
                       location={w.locationAddress}
-                      selected={selected}
-                      onToggleSelect={() => setSelectedWorkOrderId((curr) => (curr === w.id ? "" : w.id))}
+                      onOpen={() => setMenuWorkOrderId(w.id)}
                     />
                   );
                 })}
@@ -453,7 +464,18 @@ export default function DispatchPage() {
 
             {/* Right: Weekly grid */}
             <div className="ui-card ui-card-pad overflow-auto">
-              <div className="font-medium mb-3">Dispatch Grid</div>
+              <div className="font-medium mb-3 flex items-center justify-between">
+                <span>Dispatch Grid</span>
+                {focusedTechId && (
+                  <button
+                    type="button"
+                    className="text-xs underline text-gray-600"
+                    onClick={() => setFocusedTechId(null)}
+                  >
+                    Show all techs
+                  </button>
+                )}
+              </div>
 
               <div className="grid grid-cols-[220px_repeat(7,minmax(160px,1fr))] gap-2">
                 <div className="text-sm font-medium text-gray-600">Tech</div>
@@ -463,12 +485,23 @@ export default function DispatchPage() {
                   </div>
                 ))}
 
-                {techs.map((t) => (
+                {visibleTechs.map((t) => (
                   <React.Fragment key={t.id}>
-                    <div className="ui-item bg-white">
-                      <div className="font-medium">{t.name}</div>
-                      {/*<div className="text-xs text-gray-500">{t.status}</div>*/}
-                    </div>
+                    <button
+                      type="button"
+                      className={`ui-item bg-white text-left w-full transition ${
+                        focusedTechId === t.id ? "ring-2 ring-brand-blue border-brand-blue" : ""
+                      }`}
+                      onClick={() => {
+                        setFocusedTechId((curr) => (curr === t.id ? null : t.id));
+                      }}
+                      title={focusedTechId === t.id ? "Show all techs" : "Focus this tech"}
+                    >
+                      <div className="font-medium flex items-center justify-between">
+                        <span>{t.name}</span>
+                        {focusedTechId === t.id && <span className="text-xs text-gray-500">Focused</span>}
+                      </div>
+                    </button>
 
                     {days.map((d) => {
                       const ymd = toYMD(d);
@@ -479,12 +512,6 @@ export default function DispatchPage() {
                         <DispatchCell
                           key={cellId}
                           id={cellId}
-                          isSelecting={!!selectedWorkOrderId}
-                          onClickAssign={() => {
-                            if (!selectedWorkOrderId) return;
-                            if (assignedWorkOrderIds.has(selectedWorkOrderId)) return;
-                            openCreateModal(selectedWorkOrderId, t.id, ymd);
-                          }}
                         >
                           <div className="space-y-2 mt-2">
                             {cellEvents.map((ev) => {
@@ -515,7 +542,7 @@ export default function DispatchPage() {
 
                             {cellEvents.length === 0 && (
                               <div className="text-xs text-gray-400">
-                                {selectedWorkOrderId ? "Click Assign or drag a job here" : "Drop here"}
+                                Drop here
                               </div>
                             )}
                           </div>
@@ -750,6 +777,80 @@ export default function DispatchPage() {
           </div>
         </div>
       )}
+
+      {/* Unscheduled Job Details Modal */}
+      {menuWorkOrder && (
+        <div
+          className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4"
+          onClick={() => setMenuWorkOrderId(null)}
+        >
+          <div className="ui-card ui-card-pad w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-lg font-semibold">
+                  {menuWorkOrder.wo?.description ?? "Unscheduled Job"}
+                </div>
+                <div className="text-sm text-gray-600 mt-1">
+                  {menuWorkOrder.cust?.name ?? "Unknown Customer"}
+                </div>
+              </div>
+
+              <button className="ui-btn ui-btn-primary" onClick={() => setMenuWorkOrderId(null)}>
+                Close
+              </button>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4 mt-5">
+              {/* Left */}
+              <div className="space-y-3">
+                <div className="rounded-lg border border-black/10 p-3">
+                  <div className="text-xs text-gray-500">Status</div>
+                  <div className="font-medium">UNSCHEDULED</div>
+
+                  <div className="text-xs text-gray-500 mt-2">Address</div>
+                  <div className="font-medium">{streetAndCity(menuWorkOrder.wo?.locationAddress ?? "") || "—"}</div>
+
+                  <div className="text-xs text-gray-500 mt-2">Phone</div>
+                  <div className="font-medium">{fmtPhone(menuWorkOrder.cust?.phone ?? "")}</div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  <button
+                    className="ui-btn ui-btn-primary"
+                    onClick={() => router.push(`/jobs/${menuWorkOrder.wo!.id}`)}
+                  >
+                    View Job
+                  </button>
+                </div>
+              </div>
+
+              {/* Right: Work to be done */}
+              <div className="rounded-lg border border-black/10 p-3">
+                <div className="font-semibold mb-2">Work to be done</div>
+
+                {(() => {
+                  const services = menuWorkOrder.wo?.lineItems?.filter((i: any) => i.type === "SERVICE") ?? [];
+                  return services.length ? (
+                    <ul className="space-y-2">
+                      {services.map((s: any) => (
+                        <li key={s.id} className="rounded border border-black/10 p-2 bg-white">
+                          <div className="font-medium">
+                            {s.description}
+                            {s.qty > 1 ? ` × ${s.qty}` : ""}
+                          </div>
+                          {s.details ? <div className="text-sm text-gray-600 mt-1">{s.details}</div> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-sm text-gray-600">No services listed yet.</div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -759,15 +860,13 @@ function WorkOrderCard({
   workOrder,
   customerName,
   location,
-  selected,
-  onToggleSelect,
+  onOpen,
 }: {
   dragId: string;
   workOrder: WorkOrder;
   customerName: string;
   location?: string;
-  selected: boolean;
-  onToggleSelect: () => void;
+  onOpen: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: dragId });
 
@@ -779,10 +878,12 @@ function WorkOrderCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`ui-item w-full text-left cursor-grab select-none ${
-        selected ? "border-brand-blue ring-2 ring-brand-blue" : ""
-      } ${isDragging ? "opacity-60" : ""}`}
-      onClick={onToggleSelect}
+      className={`ui-item w-full text-left cursor-grab select-none ${isDragging ? "opacity-60" : ""}`}
+      onClick={(e) => {
+        // if the user is dragging, don't open
+        if (isDragging) return;
+        onOpen();
+      }}
       {...listeners}
       {...attributes}
     >
@@ -795,34 +896,21 @@ function WorkOrderCard({
           {streetAndCity(location)}
         </div>
       )}
-      <div className="text-xs text-gray-500 mt-2">{selected ? "Selected (click to deselect)" : "Drag or click"}</div>
     </div>
   );
 }
 
 function DispatchCell({
   id,
-  isSelecting,
-  onClickAssign,
   children,
 }: {
   id: string;
-  isSelecting: boolean;
-  onClickAssign: () => void;
   children: React.ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
     <div ref={setNodeRef} className={`ui-item bg-white min-h-[120px] transition ${isOver ? "ring-2 ring-brand-blue" : ""}`}>
-      <div className="flex items-center justify-between">
-        <div className="text-xs text-gray-500">{isSelecting ? "Click Assign or drop" : ""}</div>
-        {isSelecting && (
-          <button type="button" className="text-xs underline" onClick={onClickAssign}>
-            Assign
-          </button>
-        )}
-      </div>
       {children}
     </div>
   );
