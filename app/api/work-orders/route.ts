@@ -60,6 +60,14 @@ export async function GET() {
         // amounts
         jobAmount,
         dueAmount,
+        // line items for dispatch
+        lineItems: wo.lineItems.map((item) => ({
+          id: item.id,
+          type: item.type,
+          description: item.description,
+          details: item.details ?? "",
+          qty: item.qty,
+        })),
       };
     })
   );

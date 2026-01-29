@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragEndEvent,
@@ -12,6 +13,14 @@ import {
 } from "@dnd-kit/core";
 
 type Technician = { id: string; name: string; status: "Available" | "Busy" };
+
+type WorkOrderLineItem = {
+  id: string;
+  type: string;
+  description: string;
+  details?: string;
+  qty: number;
+};
 
 type WorkOrder = {
   id: string;
@@ -27,17 +36,19 @@ type WorkOrder = {
   assignedStartAt?: string | null;
   assignedEndAt?: string | null;
   createdAt: string;
+  lineItems?: WorkOrderLineItem[];
 };
 
 type Customer = { id: string; name: string; phone: string; address: string };
 
 type DispatchEvent = {
   id: string;
-  workOrderId: string;
+  workOrderId?: string | null;
   techId: string;
   startAt: string;
   endAt: string;
   status: "SCHEDULED" | "IN_PROGRESS" | "COMPLETE" | "CANCELED";
+  type?: "JOB" | "TASK" | "MEETING";
   notes?: string;
 };
 
@@ -72,6 +83,42 @@ function fmtMD(d: Date) {
 function fmtTime(iso: string) {
   const d = new Date(iso);
   return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+function streetAndCity(addr?: string | null) {
+  if (!addr) return "";
+
+  // Normalize newlines
+  const line = addr
+    .split("\n")
+    .map((s) => s.trim())
+    .find(Boolean) ?? "";
+
+  // Handle common formats:
+  // "954 13th St S, Lethbridge, AB T1K..."
+  // "954 13th St S — Lethbridge"
+  // "954 13th St S - Lethbridge"
+
+  if (line.includes(",")) {
+    const parts = line.split(",").map((p) => p.trim());
+    return parts.slice(0, 2).join(", "); // street + city
+  }
+
+  if (line.includes("—")) {
+    const parts = line.split("—").map((p) => p.trim());
+    return parts.slice(0, 2).join(" — ");
+  }
+
+  if (line.includes(" - ")) {
+    const parts = line.split(" - ").map((p) => p.trim());
+    return parts.slice(0, 2).join(" - ");
+  }
+
+  return line;
+}
+function fmtPhone(raw?: string | null) {
+  const d = (raw ?? "").replace(/\D/g, "");
+  if (d.length !== 10) return raw ?? "—";
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
 }
 
 // ids
@@ -141,6 +188,7 @@ type PendingDrop =
     };
 
 export default function DispatchPage() {
+  const router = useRouter();
   const [techs, setTechs] = useState<Technician[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
@@ -183,6 +231,17 @@ export default function DispatchPage() {
     const end = addDays(weekStart, 6);
     return `${fmtMD(weekStart)} – ${fmtMD(end)}`;
   }, [weekStart]);
+
+  const menuDetails = useMemo(() => {
+    if (!menuEvent) return null;
+
+    const ev = events.find((x) => x.id === menuEvent.id);
+    const wo = workOrders.find((x) => x.id === menuEvent.workOrderId);
+    const cust = wo ? customersById[wo.customerId] : null;
+    const tech = techsById[menuEvent.techId];
+
+    return { ev, wo, cust, tech };
+  }, [menuEvent, events, workOrders, customersById, techsById]);
 
   async function refresh() {
     setLoading(true);
@@ -381,6 +440,7 @@ export default function DispatchPage() {
                       dragId={woDragId(w.id)}
                       workOrder={w}
                       customerName={customerName}
+                      location={w.locationAddress}
                       selected={selected}
                       onToggleSelect={() => setSelectedWorkOrderId((curr) => (curr === w.id ? "" : w.id))}
                     />
@@ -436,8 +496,10 @@ export default function DispatchPage() {
                                   key={ev.id}
                                   dragId={evDragId(ev.id)}
                                   timeLabel={`${fmtTime(ev.startAt)} – ${fmtTime(ev.endAt)}`}
-                                  title={`${w?.description ?? "Job"} — ${c?.name ?? "Unknown"}`}
-                                  subtitle={w?.description ?? ""}
+                                  title={w?.description ?? "Job"}
+                                  subtitle={c?.name ?? "Unknown"}
+                                  location={w?.locationAddress}
+                                  status={ev.status}
                                   onOpen={() => {
                                     setMenuEvent({
                                       id: ev.id,
@@ -530,58 +592,161 @@ export default function DispatchPage() {
         </DndContext>
       )}
 
-      {/* Event Menu Modal */}
+      {/* Event Details Modal */}
       {menuEvent && (
         <div
-          className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4"
           onClick={() => setMenuEvent(null)}
         >
-          <div
-            className="ui-card ui-card-pad w-full max-w-xs"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="font-semibold mb-3">Event Options</div>
+          <div className="ui-card ui-card-pad w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-lg font-semibold">
+                  {menuDetails?.wo?.description ?? "Scheduled Item"}
+                </div>
+                <div className="text-sm text-gray-600 mt-1">
+                  {menuDetails?.cust?.name ?? "Unknown Customer"}
+                </div>
+              </div>
 
-            <div className="text-sm mb-4 bg-white/5 p-3 rounded border border-white/10">
-              <div className="block">
-                Tech: <span className="font-medium">{techsById[menuEvent.techId]?.name ?? menuEvent.techId}</span>
-              </div>
-              <div className="block text-gray-300 text-xs mt-1">
-                {new Date(menuEvent.startAt).toLocaleString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </div>
+              <button className="ui-btn ui-btn-primary" onClick={() => setMenuEvent(null)}>
+                Close
+              </button>
             </div>
 
-            <button
-              className="w-full rounded bg-red-600 text-white py-2 hover:bg-red-700 transition mb-2"
-              onClick={async () => {
-                const res = await fetch(`/api/dispatch-events/${menuEvent.id}`, {
-                  method: "DELETE",
-                });
+            <div className="grid md:grid-cols-2 gap-4 mt-5">
+              {/* Left: Basic info */}
+              <div className="space-y-3">
+                <div className="rounded-lg border border-black/10 p-3">
+                  <div className="text-xs text-gray-500">Scheduled</div>
+                  <div className="font-medium">
+                    {new Date(menuEvent.startAt).toLocaleString(undefined, {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    {" — "}
+                    {new Date(menuEvent.endAt).toLocaleTimeString(undefined, {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
 
-                if (!res.ok) {
-                  const txt = await res.text().catch(() => "");
-                  alert(`Failed to unassign: ${res.status}\n${txt}`);
-                  return;
-                }
+                  <div className="text-xs text-gray-500 mt-2">Tech</div>
+                  <div className="font-medium">{menuDetails?.tech?.name ?? menuEvent.techId}</div>
 
-                setMenuEvent(null);
-                await refresh();
-              }}
-            >
-              Unassign
-            </button>
+                  <div className="text-xs text-gray-500 mt-2">Address</div>
+                  <div className="font-medium">
+                    {streetAndCity(menuDetails?.wo?.locationAddress ?? "") || "—"}
+                  </div>
 
-            <button
-              className="w-full rounded border border-white/20 py-2 hover:bg-white/5 transition"
-              onClick={() => setMenuEvent(null)}
-            >
-              Cancel
-            </button>
+                  <div className="text-xs text-gray-500 mt-2">Phone</div>
+                  <div className="font-medium">{fmtPhone(menuDetails?.cust?.phone)}</div>
+
+                  <div className="text-xs text-gray-500 mt-2">Status</div>
+                  <div className="font-medium">{menuDetails?.ev?.status ?? "SCHEDULED"}</div>
+                </div>
+
+                {/* Actions */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* View Job */}
+                  {menuDetails?.wo?.id && (
+                    <button
+                      className="col-span-2 ui-btn ui-btn-primary"
+                      onClick={() => {
+                        router.push(`/jobs/${menuDetails.wo.id}`);
+                      }}
+                    >
+                      View Job
+                    </button>
+                  )}
+
+                  {/* Start / Complete */}
+                  <button
+                    className="ui-btn ui-btn-secondary"
+                    onClick={async () => {
+                      const res = await fetch(`/api/dispatch-events/${menuEvent.id}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ status: "IN_PROGRESS" }),
+                      });
+                      if (!res.ok) {
+                        const txt = await res.text().catch(() => "");
+                        alert(`Failed: ${res.status}\n${txt}`);
+                        return;
+                      }
+                      await refresh();
+                      setMenuEvent(null);
+                    }}
+                  >
+                    Start
+                  </button>
+
+                  <button
+                    className="ui-btn ui-btn-secondary"
+                    onClick={async () => {
+                      const res = await fetch(`/api/dispatch-events/${menuEvent.id}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ status: "COMPLETE" }),
+                      });
+                      if (!res.ok) {
+                        const txt = await res.text().catch(() => "");
+                        alert(`Failed: ${res.status}\n${txt}`);
+                        return;
+                      }
+                      await refresh();
+                      setMenuEvent(null);
+                    }}
+                  >
+                    Complete
+                  </button>
+
+                  {/* Unassign */}
+                  <button
+                    className="col-span-2 w-full rounded bg-red-600 text-white py-2 hover:bg-red-700 transition"
+                    onClick={async () => {
+                      const res = await fetch(`/api/dispatch-events/${menuEvent.id}`, { method: "DELETE" });
+                      if (!res.ok) {
+                        const txt = await res.text().catch(() => "");
+                        alert(`Failed to unassign: ${res.status}\n${txt}`);
+                        return;
+                      }
+                      await refresh();
+                      setMenuEvent(null);
+                    }}
+                  >
+                    Unassign
+                  </button>
+                </div>
+              </div>
+
+              {/* Right: Work to be done (services) */}
+              <div className="rounded-lg border border-black/10 p-3">
+                <div className="font-semibold mb-2">Work to be done</div>
+
+                {(() => {
+                  const services = menuDetails?.wo?.lineItems?.filter((i) => i.type === "SERVICE") ?? [];
+                  return services.length > 0 ? (
+                    <ul className="space-y-2">
+                      {services.map((s) => (
+                        <li key={s.id} className="rounded border border-black/10 p-2 bg-white">
+                          <div className="font-medium">
+                            {s.description}
+                            {s.qty > 1 ? ` × ${s.qty}` : ""}
+                          </div>
+                          {s.details ? <div className="text-sm text-gray-600 mt-1">{s.details}</div> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-sm text-gray-600">No services listed yet.</div>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -593,12 +758,14 @@ function WorkOrderCard({
   dragId,
   workOrder,
   customerName,
+  location,
   selected,
   onToggleSelect,
 }: {
   dragId: string;
   workOrder: WorkOrder;
   customerName: string;
+  location?: string;
   selected: boolean;
   onToggleSelect: () => void;
 }) {
@@ -623,6 +790,11 @@ function WorkOrderCard({
         {workOrder.description || "Job"} — {customerName}
       </div>
       <div className="ui-muted">{workOrder.description}</div>
+      {location && (
+        <div className="text-xs text-gray-500 mt-1 whitespace-normal break-words">
+          {streetAndCity(location)}
+        </div>
+      )}
       <div className="text-xs text-gray-500 mt-2">{selected ? "Selected (click to deselect)" : "Drag or click"}</div>
     </div>
   );
@@ -661,15 +833,20 @@ function EventBlock({
   timeLabel,
   title,
   subtitle,
+  location,
+  status,
   onOpen,
 }: {
   dragId: string;
   timeLabel: string;
   title: string;
   subtitle: string;
+  location?: string;
+  status?: "SCHEDULED" | "IN_PROGRESS" | "COMPLETE" | "CANCELED";
   onOpen: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: dragId });
+  const isCompleted = status === "COMPLETE";
 
   const style: React.CSSProperties = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
@@ -679,9 +856,11 @@ function EventBlock({
     <div
       ref={setNodeRef}
       style={style}
-      className={`rounded-lg border border-black/10 p-2 bg-gray-50 cursor-grab select-none ${
-        isDragging ? "opacity-60" : ""
-      }`}
+      className={`rounded-lg border p-2 cursor-grab select-none transition ${
+        isCompleted
+          ? "border-gray-300 bg-gray-100 text-gray-400 opacity-70"
+          : "border-black/10 bg-gray-50"
+      } ${isDragging ? "opacity-60" : ""}`}
       onClick={(e) => {
         e.stopPropagation();
         onOpen();
@@ -689,9 +868,18 @@ function EventBlock({
       {...listeners}
       {...attributes}
     >
-      <div className="text-xs text-gray-500">{timeLabel}</div>
-      <div className="font-medium text-sm">{title}</div>
-      <div className="text-xs text-gray-600 truncate">{subtitle}</div>
+      <div className={`text-xs ${isCompleted ? "text-gray-500" : "text-gray-500"}`}>{timeLabel}</div>
+      <div className={`font-medium text-sm ${isCompleted ? "line-through" : ""}`}>{title}</div>
+      <div className={`text-xs truncate ${isCompleted ? "text-gray-500" : "text-gray-600"}`}>{subtitle}</div>
+      {location && (
+        <div
+          className={`text-xs mt-0.5 whitespace-normal break-words ${
+            isCompleted ? "text-gray-400" : "text-gray-500"
+          }`}
+        >
+          {streetAndCity(location)}
+        </div>
+      )}
     </div>
   );
 }

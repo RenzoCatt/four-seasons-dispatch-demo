@@ -123,3 +123,5 @@ import { prisma } from "@/lib/prisma";
 - **Cascading Deletes**: Customer/Location deletions cascade to WorkOrders/Invoices; handle carefully in endpoints
 - **Auto-increment Fields**: jobNumber and invoiceNumber auto-increment; don't set manually unless migrating legacy data
 - **Environment Setup**: Requires DATABASE_URL (.env.local) pointing to PostgreSQL; Docker Compose file present for local DB
+
+** IMPORTANT**: For now, the database the local code uses is the supabase production database (as seen in the .env.local file). Do not suggest changing this. Or changing anything with it, every database altercation happens with sql input on the supabase dashboard.

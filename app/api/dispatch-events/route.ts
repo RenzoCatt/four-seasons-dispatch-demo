@@ -50,7 +50,8 @@ export async function GET(req: Request) {
       techId: e.techId,
       startAt: e.startAt.toISOString(),
       endAt: e.endAt.toISOString(),
-      status: e.status, // return enum
+      status: e.status,
+      type: e.type,
       notes: e.notes ?? "",
     }))
   );
@@ -59,25 +60,28 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const body = await req.json();
 
-  if (!body?.workOrderId || !body?.techId || !body?.startAt || !body?.endAt) {
-    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  if (!body?.techId || !body?.startAt || !body?.endAt) {
+    return NextResponse.json({ error: "Missing fields: techId, startAt, endAt required" }, { status: 400 });
   }
 
-  // ✅ THIS is the fix: verify against DB, not store
-  const wo = await prisma.workOrder.findUnique({
-    where: { id: body.workOrderId },
-  });
+  // workOrderId is optional - allows pure tasks/meetings
+  if (body?.workOrderId) {
+    const wo = await prisma.workOrder.findUnique({
+      where: { id: body.workOrderId },
+    });
 
-  if (!wo) {
-    return NextResponse.json({ error: "Work order not found" }, { status: 400 });
+    if (!wo) {
+      return NextResponse.json({ error: "Work order not found" }, { status: 400 });
+    }
   }
 
   const created = await prisma.dispatchEvent.create({
     data: {
-      workOrderId: wo.id,
+      workOrderId: body.workOrderId || null,
       techId: body.techId,
       startAt: new Date(body.startAt),
       endAt: new Date(body.endAt),
+      type: body.type || "JOB",
       status: normalizeDispatchStatus(body.status),
       notes: body.notes || null,
     },

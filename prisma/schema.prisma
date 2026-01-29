@@ -155,15 +155,16 @@ model InvoiceLineItem {
 
 model DispatchEvent {
   id          String         @id @default(cuid())
-  workOrderId String         @unique
+  workOrderId String?        @unique
   techId      String
   startAt     DateTime
   endAt       DateTime
   status      DispatchStatus @default(SCHEDULED)
+  type        EventType      @default(JOB)
   notes       String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
-  workOrder   WorkOrder      @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  workOrder   WorkOrder?     @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
 
   @@index([techId, startAt])
 }
@@ -307,6 +308,12 @@ enum DispatchStatus {
   IN_PROGRESS
   COMPLETE
   CANCELED
+}
+
+enum EventType {
+  JOB
+  TASK
+  MEETING
 }
 
 enum PricingTier {

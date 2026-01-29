@@ -8,11 +8,12 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
 
-  // allow updating schedule fields when dragging
+  // allow updating schedule fields when dragging, status for completion, and type
   const startAt = body.startAt ? new Date(body.startAt) : undefined;
   const endAt = body.endAt ? new Date(body.endAt) : undefined;
   const techId = body.techId ?? undefined;
   const status = body.status ?? undefined;
+  const type = body.type ?? undefined;
 
   try {
     const updated = await prisma.dispatchEvent.update({
@@ -22,6 +23,7 @@ export async function PATCH(
         ...(endAt ? { endAt } : {}),
         ...(techId ? { techId } : {}),
         ...(status ? { status } : {}),
+        ...(type ? { type } : {}),
       },
     });
 
