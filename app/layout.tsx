@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="min-h-screen bg-brand-dark text-white">
         <div className="flex min-h-screen">
-          <aside className="w-56 bg-brand-dark border-r border-white/10 p-4">
+          <aside className="w-56 shrink-0 bg-brand-dark border-r border-white/10 p-4">
           <Link href="/" className="flex items-center gap-3 mb-6">
             <Image
               src="/logo.png"
@@ -51,7 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 
             {/* PAGE CONTENT */}
-            <main className="flex-1 p-6">{children}</main>
+            <main className="flex-1 min-w-0 p-6">{children}</main>
           </div>
         </div>
       </body>
