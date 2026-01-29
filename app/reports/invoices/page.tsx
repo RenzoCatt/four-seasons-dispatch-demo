@@ -7,7 +7,9 @@ type InvoiceRow = {
   id: string;
   invoiceNumber: number;
   status: "DRAFT" | "SENT" | "PAID" | "VOID";
-  total: number; // cents
+  subtotal: number; // cents
+  tax: number;      // cents
+  total: number;    // cents
   createdAt: string;
   customerName: string;
 };
@@ -72,10 +74,12 @@ export default function InvoiceDashboardPage() {
       )}
 
       <div className="ui-item">
-        <div className="grid grid-cols-[120px_1fr_120px_140px_140px] gap-3 px-4 py-3 text-xs font-semibold text-gray-500 border-b border-white/10">
+        <div className="grid grid-cols-[120px_1fr_120px_140px_140px_140px_140px] gap-3 px-4 py-3 text-xs font-semibold text-gray-500 border-b border-white/10">
           <div>Invoice #</div>
           <div>Customer</div>
           <div>Status</div>
+          <div>Subtotal</div>
+          <div>Tax</div>
           <div>Total</div>
           <div>Created</div>
         </div>
@@ -89,7 +93,7 @@ export default function InvoiceDashboardPage() {
             <Link
               key={r.id}
               href={`/invoices/${r.id}`}
-              className="grid grid-cols-[120px_1fr_120px_140px_140px] gap-3 px-4 py-3 border-t border-white/5 hover:bg-white/5 transition items-center text-sm"
+              className="grid grid-cols-[120px_1fr_120px_140px_140px_140px_140px] gap-3 px-4 py-3 border-t border-white/5 hover:bg-white/5 transition items-center text-sm"
             >
               <div className="font-medium">#{r.invoiceNumber}</div>
               <div className="truncate">{r.customerName}</div>
@@ -98,6 +102,8 @@ export default function InvoiceDashboardPage() {
                   {r.status}
                 </span>
               </div>
+              <div className="font-medium">{money(r.subtotal)}</div>
+              <div className="font-medium">{money(r.tax)}</div>
               <div className="font-medium">{money(r.total)}</div>
               <div className="text-gray-400">
                 {new Date(r.createdAt).toLocaleDateString()}

@@ -1,7 +1,9 @@
 import * as React from "react";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { Document, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image, StyleSheet, pdf } from "@react-pdf/renderer";
+import fs from "fs";
+import path from "path";
 
 export const runtime = "nodejs";
 
@@ -24,6 +26,8 @@ const styles = StyleSheet.create({
   companyName: { fontSize: 10, fontWeight: 700 },
   muted: { color: "#666" },
 
+  divider: { borderBottomWidth: 1, borderBottomColor: "#e6e6e6", marginTop: 8, marginBottom: 14 },
+
   twoCol: { flexDirection: "row", justifyContent: "space-between", marginBottom: 14 },
   billToBox: { width: "52%" },
   metaBox: { width: "44%" },
@@ -36,9 +40,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#3a3a3a",
     color: "white",
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    marginTop: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    marginTop: 12,
   },
   thItem: { width: "55%", fontWeight: 700 },
   thQty: { width: "15%", textAlign: "right", fontWeight: 700 },
@@ -56,6 +60,9 @@ const styles = StyleSheet.create({
   tdQty: { width: "15%", textAlign: "right" },
   tdPrice: { width: "15%", textAlign: "right" },
   tdAmt: { width: "15%", textAlign: "right" },
+
+  itemTitle: { fontSize: 10, fontWeight: 700, color: "#111" },
+  itemDetails: { marginTop: 2, fontSize: 9, color: "#666", lineHeight: 1.25 },
 
   totalsWrap: { marginTop: 16, alignItems: "flex-end" },
   totalsBox: { width: 240 },
@@ -98,11 +105,18 @@ function InvoicePdfDoc(props: {
   paymentDue: Date;
   billTo: { name: string; address: string; phone?: string | null; email?: string | null };
   company: { name: string; addressLines: string[]; phone?: string | null };
-  lineItems: Array<{ description: string; quantity: number; unitPrice: number; total: number }>;
+  lineItems: Array<{
+    description: string;
+    details?: string | null;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }>;
   subtotal: number;
   tax: number;
   total: number;
   notes?: string | null;
+  logoData?: string | null;
 }) {
   const amountDue = props.total; // until you track payments, amountDue = total
 
@@ -118,7 +132,14 @@ function InvoicePdfDoc(props: {
     h(
       View,
       { key: `li-${idx}`, style: styles.tr },
-      h(Text, { style: styles.tdItem }, li.description),
+      h(
+        View,
+        { style: styles.tdItem },
+        h(Text, { style: styles.itemTitle }, li.description),
+        li.details?.trim()
+          ? h(Text, { style: styles.itemDetails }, li.details)
+          : null
+      ),
       h(Text, { style: styles.tdQty }, String(li.quantity)),
       h(Text, { style: styles.tdPrice }, money(li.unitPrice)),
       h(Text, { style: styles.tdAmt }, money(li.total))
@@ -138,12 +159,14 @@ function InvoicePdfDoc(props: {
       h(
         View,
         { style: styles.headerRow },
-        h(
-          View,
-          { style: styles.logoBox },
-          h(Text, { style: { fontSize: 12, fontWeight: 700 } }, "4 Seasons"),
-          h(Text, { style: { fontSize: 10 } }, "(logo placeholder)")
-        ),
+        props.logoData
+          ? h(Image, { src: props.logoData, style: { width: 140, height: 60, objectFit: "contain" } })
+          : h(
+              View,
+              { style: styles.logoBox },
+              h(Text, { style: { fontSize: 12, fontWeight: 700 } }, "4 Seasons"),
+              h(Text, { style: { fontSize: 10 } }, "(logo placeholder)")
+            ),
         h(
           View,
           { style: styles.headerRight },
@@ -153,6 +176,9 @@ function InvoicePdfDoc(props: {
           phoneLine
         )
       ),
+
+      // Divider line
+      h(View, { style: styles.divider }),
 
       // Bill to + meta
       h(
@@ -276,6 +302,14 @@ export async function GET(
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
+    // Load logo from public folder
+    const logoPath = path.join(process.cwd(), "public", "logo.png");
+    let logoData: string | null = null;
+    if (fs.existsSync(logoPath)) {
+      const logoBuffer = fs.readFileSync(logoPath);
+      logoData = `data:image/png;base64,${logoBuffer.toString("base64")}`;
+    }
+
     const invoiceDate = invoice.createdAt ?? new Date();
     const paymentDue = addDays(invoiceDate, 30);
 
@@ -296,6 +330,7 @@ export async function GET(
       },
       lineItems: (invoice.lineItems ?? []).map((li) => ({
         description: li.description,
+        details: (li as any).details ?? null,
         quantity: li.quantity,
         unitPrice: li.unitPrice,
         total: li.total,
@@ -304,6 +339,7 @@ export async function GET(
       tax: invoice.tax,
       total: invoice.total,
       notes: (invoice as any).notes ?? null,
+      logoData,
     });
 
     const blob = await pdf(doc).toBlob();

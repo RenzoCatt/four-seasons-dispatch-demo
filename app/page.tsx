@@ -13,42 +13,33 @@ export default function DashboardPage() {
 
         <ul className="list-disc pl-5 text-sm text-gray-700 space-y-2">
           <li>
-            <strong>Dispatch view rebuilt:</strong> Weekly grid with tech rows, drag-and-drop scheduling, and completed tasks crossed off.
+            <strong>Dispatch page major overhaul:</strong> Weekly grid view with drag-and-drop scheduling, completed jobs crossed off, click-to-view job modal with customer info and line items.
           </li>
           <li>
-            <strong>Job details modal in dispatch:</strong> Click any scheduled job to see customer info, address, phone, services, and quick actions (Start/Complete/Unassign/View Job).
+            <strong>Jobs page rebuilt:</strong> ServiceTitan-style searchable table with filtering, real-time status, and assigned tech display.
           </li>
           <li>
-            <strong>Dispatch events support optional work orders:</strong> Can now schedule pure tasks/meetings without requiring a full job (type: JOB, TASK, MEETING).
+            <strong>Job details redesigned:</strong> Housecall Pro layout with customer sidebar, field tech status, and editable line items (no more auto-save, single Save button).
           </li>
           <li>
-            <strong>More information density:</strong> Event blocks show job description, customer name, and street + city (no province/postal clutter).
+            <strong>Line items improvements:</strong> Title + details fields, decimal quantities (1.50), currency formatting (640.00), pricebook integration with full descriptions.
           </li>
           <li>
-            <strong>Work order line items visible in dispatch:</strong> "Work to be done" section shows all services with descriptions and quantities.
+            <strong>Status sync fixed:</strong> Completing a job in dispatch now marks the work order complete, and vice versa — no more mismatched statuses.
           </li>
           <li>
-            Jobs list page rebuilt into a searchable table view (ServiceTitan style).
+            <strong>Field tech assignment:</strong> Job details now show assigned tech name and scheduled times pulled from dispatch events.
           </li>
           <li>
-            Job details page updated to Housecall Pro style layout (left customer panel + main workflow).
+            <strong>Invoice PDF polish:</strong> Real logo from /public, item details included, cleaner header with divider line.
           </li>
           <li>
-            Line items now support title + long description (stored as description + details).
-          </li>
-          <li>
-            Line items are editable without auto-saving; one "Save Work Order" button saves changes.
-          </li>
-          <li>
-            Quantity and Unit Price support decimals and display as 1.00 / 640.00.
-          </li>
-          <li>
-            Pricebook add now carries over long descriptions into line item details.
+            <strong>UI polish:</strong> Removed number input spinners, fixed sidebar collapse on wide tables, better responsive layout.
           </li>
         </ul>
 
         <div className="text-xs text-gray-500">
-          Note: "Due amount / payments" are not implemented yet.
+          Note: Payments tracking not yet implemented.
         </div>
       </div>
     </div>

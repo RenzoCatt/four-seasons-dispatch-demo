@@ -1,0 +1,236 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.Customer (
+  id text NOT NULL,
+  name text NOT NULL,
+  phone text,
+  email text,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt timestamp without time zone NOT NULL,
+  notes text,
+  company text,
+  customerType USER-DEFINED DEFAULT 'HOMEOWNER'::"CustomerType",
+  displayName text,
+  firstName text,
+  lastName text,
+  role text,
+  CONSTRAINT Customer_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.CustomerAddress (
+  id text NOT NULL,
+  customerId text NOT NULL,
+  street text NOT NULL,
+  unit text,
+  municipality text NOT NULL,
+  province text NOT NULL,
+  postalCode text NOT NULL,
+  addressNotes text,
+  isBilling boolean NOT NULL DEFAULT false,
+  isService boolean NOT NULL DEFAULT true,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT CustomerAddress_pkey PRIMARY KEY (id),
+  CONSTRAINT CustomerAddress_customerId_fkey FOREIGN KEY (customerId) REFERENCES public.Customer(id)
+);
+CREATE TABLE public.CustomerEmail (
+  id text NOT NULL,
+  customerId text NOT NULL,
+  value text NOT NULL,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT CustomerEmail_pkey PRIMARY KEY (id),
+  CONSTRAINT CustomerEmail_customerId_fkey FOREIGN KEY (customerId) REFERENCES public.Customer(id)
+);
+CREATE TABLE public.CustomerPhone (
+  id text NOT NULL,
+  customerId text NOT NULL,
+  type USER-DEFINED NOT NULL DEFAULT 'MOBILE'::"PhoneType",
+  value text NOT NULL,
+  note text,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT CustomerPhone_pkey PRIMARY KEY (id),
+  CONSTRAINT CustomerPhone_customerId_fkey FOREIGN KEY (customerId) REFERENCES public.Customer(id)
+);
+CREATE TABLE public.CustomerTag (
+  id text NOT NULL,
+  customerId text NOT NULL,
+  value text NOT NULL,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT CustomerTag_pkey PRIMARY KEY (id),
+  CONSTRAINT CustomerTag_customerId_fkey FOREIGN KEY (customerId) REFERENCES public.Customer(id)
+);
+CREATE TABLE public.DispatchEvent (
+  id text NOT NULL,
+  workOrderId text,
+  techId text NOT NULL,
+  startAt timestamp without time zone NOT NULL,
+  endAt timestamp without time zone NOT NULL,
+  status USER-DEFINED NOT NULL DEFAULT 'SCHEDULED'::"DispatchStatus",
+  notes text,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt timestamp without time zone NOT NULL,
+  type USER-DEFINED NOT NULL DEFAULT 'JOB'::"EventType",
+  CONSTRAINT DispatchEvent_pkey PRIMARY KEY (id),
+  CONSTRAINT DispatchEvent_workOrderId_fkey FOREIGN KEY (workOrderId) REFERENCES public.WorkOrder(id)
+);
+CREATE TABLE public.Invoice (
+  id text NOT NULL,
+  invoiceNumber integer NOT NULL DEFAULT nextval('"Invoice_invoiceNumber_seq"'::regclass),
+  customerId text NOT NULL,
+  locationId text NOT NULL,
+  workOrderId text NOT NULL,
+  status USER-DEFINED NOT NULL DEFAULT 'DRAFT'::"InvoiceStatus",
+  subtotal integer NOT NULL DEFAULT 0,
+  tax integer NOT NULL DEFAULT 0,
+  total integer NOT NULL DEFAULT 0,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt timestamp without time zone NOT NULL,
+  publicToken text,
+  sentAt timestamp without time zone,
+  CONSTRAINT Invoice_pkey PRIMARY KEY (id),
+  CONSTRAINT Invoice_customerId_fkey FOREIGN KEY (customerId) REFERENCES public.Customer(id),
+  CONSTRAINT Invoice_locationId_fkey FOREIGN KEY (locationId) REFERENCES public.Location(id),
+  CONSTRAINT Invoice_workOrderId_fkey FOREIGN KEY (workOrderId) REFERENCES public.WorkOrder(id)
+);
+CREATE TABLE public.InvoiceLineItem (
+  id text NOT NULL,
+  invoiceId text NOT NULL,
+  type USER-DEFINED NOT NULL,
+  description text NOT NULL,
+  quantity integer NOT NULL DEFAULT 1,
+  unitPrice integer NOT NULL DEFAULT 0,
+  total integer NOT NULL DEFAULT 0,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  details text,
+  CONSTRAINT InvoiceLineItem_pkey PRIMARY KEY (id),
+  CONSTRAINT InvoiceLineItem_invoiceId_fkey FOREIGN KEY (invoiceId) REFERENCES public.Invoice(id)
+);
+CREATE TABLE public.Location (
+  id text NOT NULL,
+  customerId text NOT NULL,
+  name text NOT NULL,
+  address text NOT NULL,
+  notes text,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt timestamp without time zone NOT NULL,
+  CONSTRAINT Location_pkey PRIMARY KEY (id),
+  CONSTRAINT Location_customerId_fkey FOREIGN KEY (customerId) REFERENCES public.Customer(id)
+);
+CREATE TABLE public.PriceBookItem (
+  id text NOT NULL,
+  uploadId text NOT NULL,
+  sheet text NOT NULL,
+  category text NOT NULL,
+  code text NOT NULL,
+  name text NOT NULL,
+  description text,
+  taxableDefault boolean NOT NULL DEFAULT true,
+  hours numeric,
+  equipment numeric,
+  hourlyRate numeric,
+  materialMarkUp numeric,
+  CONSTRAINT PriceBookItem_pkey PRIMARY KEY (id),
+  CONSTRAINT PriceBookItem_uploadId_fkey FOREIGN KEY (uploadId) REFERENCES public.PriceBookUpload(id)
+);
+CREATE TABLE public.PriceBookRate (
+  id text NOT NULL,
+  itemId text NOT NULL,
+  tier USER-DEFINED NOT NULL,
+  unitPrice numeric NOT NULL,
+  CONSTRAINT PriceBookRate_pkey PRIMARY KEY (id),
+  CONSTRAINT PriceBookRate_itemId_fkey FOREIGN KEY (itemId) REFERENCES public.PriceBookItem(id)
+);
+CREATE TABLE public.PriceBookUpload (
+  id text NOT NULL,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  filename text NOT NULL,
+  checksum text NOT NULL,
+  notes text,
+  isActive boolean NOT NULL DEFAULT false,
+  effectiveDate timestamp without time zone,
+  CONSTRAINT PriceBookUpload_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.PricebookCategory (
+  id text NOT NULL,
+  industryId text NOT NULL,
+  parentId text,
+  name text NOT NULL,
+  sortOrder integer NOT NULL DEFAULT 0,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt timestamp without time zone NOT NULL,
+  CONSTRAINT PricebookCategory_pkey PRIMARY KEY (id),
+  CONSTRAINT PricebookCategory_industryId_fkey FOREIGN KEY (industryId) REFERENCES public.PricebookIndustry(id),
+  CONSTRAINT PricebookCategory_parentId_fkey FOREIGN KEY (parentId) REFERENCES public.PricebookCategory(id)
+);
+CREATE TABLE public.PricebookIndustry (
+  id text NOT NULL,
+  name text NOT NULL,
+  sortOrder integer NOT NULL DEFAULT 0,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt timestamp without time zone NOT NULL,
+  CONSTRAINT PricebookIndustry_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.PricebookItemNew (
+  id text NOT NULL,
+  categoryId text NOT NULL,
+  code text NOT NULL,
+  name text NOT NULL,
+  description text,
+  unit text,
+  sortOrder integer NOT NULL DEFAULT 0,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt timestamp without time zone NOT NULL,
+  CONSTRAINT PricebookItemNew_pkey PRIMARY KEY (id),
+  CONSTRAINT PricebookItemNew_categoryId_fkey FOREIGN KEY (categoryId) REFERENCES public.PricebookCategory(id)
+);
+CREATE TABLE public.PricebookRateNew (
+  id text NOT NULL,
+  itemId text NOT NULL,
+  tier USER-DEFINED NOT NULL,
+  unitPrice numeric NOT NULL,
+  hours numeric,
+  hourlyRate numeric,
+  equipment numeric,
+  materialMarkup numeric,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt timestamp without time zone NOT NULL,
+  CONSTRAINT PricebookRateNew_pkey PRIMARY KEY (id),
+  CONSTRAINT PricebookRateNew_itemId_fkey FOREIGN KEY (itemId) REFERENCES public.PricebookItemNew(id)
+);
+CREATE TABLE public.WorkOrder (
+  id text NOT NULL,
+  customerId text NOT NULL,
+  locationId text NOT NULL,
+  description text,
+  completedAt timestamp without time zone,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  jobNumber integer NOT NULL DEFAULT nextval('"WorkOrder_jobNumber_seq"'::regclass),
+  updatedAt timestamp without time zone NOT NULL,
+  status USER-DEFINED NOT NULL DEFAULT 'SCHEDULED'::"WorkOrderStatus",
+  CONSTRAINT WorkOrder_pkey PRIMARY KEY (id),
+  CONSTRAINT WorkOrder_customerId_fkey FOREIGN KEY (customerId) REFERENCES public.Customer(id),
+  CONSTRAINT WorkOrder_locationId_fkey FOREIGN KEY (locationId) REFERENCES public.Location(id)
+);
+CREATE TABLE public.WorkOrderLineItem (
+  id text NOT NULL,
+  workOrderId text NOT NULL,
+  type text NOT NULL,
+  description text NOT NULL,
+  qty double precision NOT NULL DEFAULT 1,
+  unitPrice double precision NOT NULL DEFAULT 0,
+  taxable boolean NOT NULL DEFAULT true,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  details text,
+  CONSTRAINT WorkOrderLineItem_pkey PRIMARY KEY (id),
+  CONSTRAINT WorkOrderLineItem_workOrderId_fkey FOREIGN KEY (workOrderId) REFERENCES public.WorkOrder(id)
+);
+CREATE TABLE public._prisma_migrations (
+  id character varying NOT NULL,
+  checksum character varying NOT NULL,
+  finished_at timestamp with time zone,
+  migration_name character varying NOT NULL,
+  logs text,
+  rolled_back_at timestamp with time zone,
+  started_at timestamp with time zone NOT NULL DEFAULT now(),
+  applied_steps_count integer NOT NULL DEFAULT 0,
+  CONSTRAINT _prisma_migrations_pkey PRIMARY KEY (id)
+);

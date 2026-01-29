@@ -65,5 +65,19 @@ export async function PATCH(
   }).catch(() => null);
 
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // ✅ Sync: When job is marked COMPLETED, complete all dispatch events too
+  if (body.status === "COMPLETED") {
+    await prisma.dispatchEvent.updateMany({
+      where: {
+        workOrderId: id,
+        status: { not: "COMPLETE" },
+      },
+      data: {
+        status: "COMPLETE",
+      },
+    });
+  }
+
   return NextResponse.json(updated);
 }

@@ -27,6 +27,17 @@ export async function PATCH(
       },
     });
 
+    // ✅ Sync: When dispatch is marked COMPLETE, complete the job too
+    if (body.status === "COMPLETE" && updated.workOrderId) {
+      await prisma.workOrder.update({
+        where: { id: updated.workOrderId },
+        data: {
+          status: "COMPLETED",
+          completedAt: new Date(),
+        },
+      });
+    }
+
     return NextResponse.json(updated);
   } catch (e: any) {
     // if id doesn't exist

@@ -146,6 +146,7 @@ model InvoiceLineItem {
   invoiceId   String
   type        LineItemType
   description String
+  details     String?
   quantity    Int          @default(1)
   unitPrice   Int          @default(0)
   total       Int          @default(0)

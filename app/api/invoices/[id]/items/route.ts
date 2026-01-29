@@ -23,6 +23,7 @@ export async function POST(
       invoiceId: id,
       type: body.type,
       description: body.description,
+      details: body.details ?? null,
       quantity,
       unitPrice,
       total,
