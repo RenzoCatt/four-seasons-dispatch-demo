@@ -36,7 +36,7 @@ export default function CustomerNav({ customerId }: { customerId: string }) {
           href={`/customers/${customerId}/work-orders/new`}
           className="ui-btn ui-btn-primary text-sm mb-3"
         >
-          Create Work Order
+          Create Job
         </Link>
       </div>
     </div>

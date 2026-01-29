@@ -37,21 +37,31 @@ export async function GET() {
   });
 
   return NextResponse.json(
-    workOrders.map((wo) => ({
-      id: wo.id,
-      jobNumber: wo.jobNumber,
-      customerId: wo.customerId,
-      locationId: wo.locationId,
-      customerName: wo.customer.name,
-      locationAddress: wo.location.address,
-      description: wo.description ?? "",
-      status: wo.status,
-      completedAt: wo.completedAt?.toISOString() ?? null,
-      // assignment info
-      assignedTechId: wo.dispatchEvent?.techId ?? null,
-      assignedStartAt: wo.dispatchEvent?.startAt?.toISOString?.() ?? null,
-      assignedEndAt: wo.dispatchEvent?.endAt?.toISOString?.() ?? null,
-    }))
+    workOrders.map((wo) => {
+      // Calculate job amount from line items
+      const jobAmount = wo.lineItems.reduce((sum: number, item: any) => sum + (item.qty ?? 0) * (item.unitPrice ?? 0), 0);
+      const dueAmount = jobAmount; // For now, due = total (until payments are set up)
+
+      return {
+        id: wo.id,
+        jobNumber: wo.jobNumber,
+        customerId: wo.customerId,
+        locationId: wo.locationId,
+        customerName: wo.customer.name,
+        locationAddress: wo.location.address,
+        description: wo.description ?? "",
+        status: wo.status,
+        createdAt: wo.createdAt.toISOString(),
+        completedAt: wo.completedAt?.toISOString() ?? null,
+        // assignment info
+        assignedTechId: wo.dispatchEvent?.techId ?? null,
+        assignedStartAt: wo.dispatchEvent?.startAt?.toISOString?.() ?? null,
+        assignedEndAt: wo.dispatchEvent?.endAt?.toISOString?.() ?? null,
+        // amounts
+        jobAmount,
+        dueAmount,
+      };
+    })
   );
 }
 
@@ -117,6 +127,7 @@ export async function POST(req: Request) {
         workOrderId: created.id,
         type: item.kind || item.type || "SERVICE",
         description: item.description || "",
+        details: item.details || null,
         qty: item.qty || 1,
         unitPrice: item.unitPrice || 0,
         taxable: item.taxable !== false,

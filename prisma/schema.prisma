@@ -133,6 +133,7 @@ model WorkOrderLineItem {
   workOrderId String
   type        String
   description String
+  details     String?
   qty         Float     @default(1)
   unitPrice   Float     @default(0)
   taxable     Boolean   @default(true)

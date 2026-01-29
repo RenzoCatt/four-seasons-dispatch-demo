@@ -10,8 +10,8 @@ type LineItem = {
   kind: "SERVICE" | "MATERIAL";
   name: string;
   description: string;
-  qty: number;
-  unitPrice: number; // dollars
+  qty: string;
+  unitPrice: string; // stored as string for precision
   taxable: boolean;
   // Price book fields
   priceBookItemId?: string;
@@ -27,8 +27,8 @@ function newItem(kind: LineItem["kind"]): LineItem {
     kind,
     name: "",
     description: "",
-    qty: 1,
-    unitPrice: 0,
+    qty: "1.00",
+    unitPrice: "0.00",
     taxable: true,
   };
 }
@@ -105,8 +105,12 @@ export default function NewWorkOrderFromCustomerPage() {
         `/api/pricebook/search?q=${encodeURIComponent(q)}&tier=STANDARD&limit=200`,
         { cache: "no-store" }
       );
+      if (!res.ok) throw new Error((await res.text().catch(() => "")) || res.statusText);
       const data = await res.json();
       setServiceResults(data.items ?? data ?? []);
+    } catch (e: any) {
+      console.error("Error searching services:", e);
+      setServiceResults([]);
     } finally {
       setServiceLoading(false);
     }
@@ -160,20 +164,20 @@ export default function NewWorkOrderFromCustomerPage() {
       const lineItems = [
         ...services.map((s) => ({
           kind: "SERVICE" as const,
-          name: s.name,
-          description: s.description,
-          qty: Number(s.qty) || 0,
-          unitPrice: Number(s.unitPrice) || 0,
+          description: s.name,
+          details: s.description,
+          qty: parseFloat(s.qty) || 0,
+          unitPrice: parseFloat(s.unitPrice) || 0,
           taxable: !!s.taxable,
           priceBookItemId: s.priceBookItemId ?? null,
           rateTier: s.rateTier ?? null,
         })),
         ...materials.map((m) => ({
           kind: "MATERIAL" as const,
-          name: m.name,
-          description: m.description,
-          qty: Number(m.qty) || 0,
-          unitPrice: Number(m.unitPrice) || 0,
+          description: m.name,
+          details: m.description,
+          qty: parseFloat(m.qty) || 0,
+          unitPrice: parseFloat(m.unitPrice) || 0,
           taxable: !!m.taxable,
           priceBookItemId: m.priceBookItemId ?? null,
           rateTier: m.rateTier ?? null,
@@ -217,13 +221,13 @@ export default function NewWorkOrderFromCustomerPage() {
         .join(", ")
     : "";
 
-  const serviceSubtotal = services.reduce((sum, i) => sum + i.qty * i.unitPrice, 0);
-  const materialSubtotal = materials.reduce((sum, i) => sum + i.qty * i.unitPrice, 0);
+  const serviceSubtotal = services.reduce((sum, i) => sum + (parseFloat(i.qty) || 0) * (parseFloat(i.unitPrice) || 0), 0);
+  const materialSubtotal = materials.reduce((sum, i) => sum + (parseFloat(i.qty) || 0) * (parseFloat(i.unitPrice) || 0), 0);
   const subtotal = serviceSubtotal + materialSubtotal;
 
   const taxableTotal =
-    services.filter((i) => i.taxable).reduce((s, i) => s + i.qty * i.unitPrice, 0) +
-    materials.filter((i) => i.taxable).reduce((s, i) => s + i.qty * i.unitPrice, 0);
+    services.filter((i) => i.taxable).reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.unitPrice) || 0), 0) +
+    materials.filter((i) => i.taxable).reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.unitPrice) || 0), 0);
 
   const tax = taxableTotal * TAX_RATE;
   const total = subtotal + tax;
@@ -447,7 +451,7 @@ export default function NewWorkOrderFromCustomerPage() {
                                     const tier = e.target.value as "STANDARD" | "MEMBER" | "RUMI";
                                     const price = Number(item.availableRates?.[tier] ?? item.unitPrice);
                                     setServices((prev) =>
-                                      prev.map((x) => (x.id === item.id ? { ...x, rateTier: tier, unitPrice: price } : x))
+                                      prev.map((x) => (x.id === item.id ? { ...x, rateTier: tier, unitPrice: price.toFixed(2) } : x))
                                     );
                                   }}
                                 >
@@ -465,11 +469,10 @@ export default function NewWorkOrderFromCustomerPage() {
                               className="ui-input w-full"
                               type="number"
                               min={0}
-                              step={1}
+                              step="0.01"
                               value={item.qty}
                               onChange={(e) => {
-                                const v = Number(e.target.value || 0);
-                                setServices((prev) => prev.map((x) => (x.id === item.id ? { ...x, qty: v } : x)));
+                                setServices((prev) => prev.map((x) => (x.id === item.id ? { ...x, qty: e.target.value } : x)));
                               }}
                             />
                           </div>
@@ -483,15 +486,14 @@ export default function NewWorkOrderFromCustomerPage() {
                               step="0.01"
                               value={item.unitPrice}
                               onChange={(e) => {
-                                const v = Number(e.target.value || 0);
-                                setServices((prev) => prev.map((x) => (x.id === item.id ? { ...x, unitPrice: v } : x)));
+                                setServices((prev) => prev.map((x) => (x.id === item.id ? { ...x, unitPrice: e.target.value } : x)));
                               }}
                             />
                           </div>
 
                           <div className="col-span-8 lg:col-span-1">
                             <div className="text-xs text-gray-500 mb-1">Total</div>
-                            <div className="text-sm font-medium mt-2">${money(item.qty * item.unitPrice)}</div>
+                            <div className="text-sm font-medium mt-2">${money((parseFloat(item.qty) || 0) * (parseFloat(item.unitPrice) || 0))}</div>
                           </div>
 
                           <div className="col-span-4 lg:col-span-1 flex justify-end">
@@ -579,11 +581,10 @@ export default function NewWorkOrderFromCustomerPage() {
                               className="ui-input w-full"
                               type="number"
                               min={0}
-                              step={1}
+                              step="0.01"
                               value={item.qty}
                               onChange={(e) => {
-                                const v = Number(e.target.value || 0);
-                                setMaterials((prev) => prev.map((x) => (x.id === item.id ? { ...x, qty: v } : x)));
+                                setMaterials((prev) => prev.map((x) => (x.id === item.id ? { ...x, qty: e.target.value } : x)));
                               }}
                             />
                           </div>
@@ -597,15 +598,14 @@ export default function NewWorkOrderFromCustomerPage() {
                               step="0.01"
                               value={item.unitPrice}
                               onChange={(e) => {
-                                const v = Number(e.target.value || 0);
-                                setMaterials((prev) => prev.map((x) => (x.id === item.id ? { ...x, unitPrice: v } : x)));
+                                setMaterials((prev) => prev.map((x) => (x.id === item.id ? { ...x, unitPrice: e.target.value } : x)));
                               }}
                             />
                           </div>
 
                           <div className="col-span-8 lg:col-span-1">
                             <div className="text-xs text-gray-500 mb-1">Total</div>
-                            <div className="text-sm font-medium mt-2">${money(item.qty * item.unitPrice)}</div>
+                            <div className="text-sm font-medium mt-2">${money((parseFloat(item.qty) || 0) * (parseFloat(item.unitPrice) || 0))}</div>
                           </div>
 
                           <div className="col-span-4 lg:col-span-1 flex justify-end">
@@ -721,8 +721,8 @@ export default function NewWorkOrderFromCustomerPage() {
                       kind: "SERVICE",
                       name: item.name,
                       description: item.description ?? "",
-                      qty: 1,
-                      unitPrice,
+                      qty: "1.00",
+                      unitPrice: unitPrice.toFixed(2),
                       taxable: item.taxableDefault ?? true,
                       priceBookItemId: item.id,
                       rateTier: defaultTier,

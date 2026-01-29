@@ -98,6 +98,17 @@ body {
   @apply border rounded-lg p-3 hover:bg-gray-50;
 }
 
+/* Remove number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
+}
+
 .ui-muted {
   @apply text-sm text-gray-600;
 }
