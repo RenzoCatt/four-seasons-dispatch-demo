@@ -234,3 +234,13 @@ CREATE TABLE public._prisma_migrations (
   applied_steps_count integer NOT NULL DEFAULT 0,
   CONSTRAINT _prisma_migrations_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.workorderactivity (
+  id text NOT NULL,
+  workorderid text NOT NULL,
+  type text NOT NULL,
+  message text NOT NULL,
+  isinternal boolean NOT NULL DEFAULT true,
+  createdat timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT workorderactivity_pkey PRIMARY KEY (id),
+  CONSTRAINT workorderactivity_workorderid_fkey FOREIGN KEY (workorderid) REFERENCES public.WorkOrder(id)
+);

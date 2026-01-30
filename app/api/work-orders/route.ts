@@ -22,10 +22,17 @@ function normalizeStatus(input: unknown) {
   return STATUS_MAP[key] ?? "SCHEDULED";
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   console.error("DATABASE_URL host:", host(process.env.DATABASE_URL));
   console.error("DIRECT_URL host:", host(process.env.DIRECT_URL));
+
+  // Support optional customerId query param for filtering
+  const { searchParams } = new URL(req.url);
+  const customerId = searchParams.get("customerId");
+  const where = customerId ? { customerId } : undefined;
+
   const workOrders = await prisma.workOrder.findMany({
+    where,
     include: {
       customer: true,
       location: true,

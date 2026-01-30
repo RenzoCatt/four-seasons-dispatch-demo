@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import CustomerNav from "../../../components/CustomerNav";
 import LineItemsCard from "@/app/components/LineItemsCard";
 
@@ -60,6 +60,7 @@ type Customer = {
 export default function NewWorkOrderFromCustomerPage() {
   const { customerId } = useParams<{ customerId: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -88,6 +89,26 @@ export default function NewWorkOrderFromCustomerPage() {
         const data = (await res.json()) as Customer;
         setCustomer(data);
         setAddresses(data.addresses ?? []);
+
+        // Auto-select address from query param if provided
+        const addressIdParam = searchParams.get("addressId");
+        if (addressIdParam && data.addresses) {
+          try {
+            const targetAddr = JSON.parse(decodeURIComponent(addressIdParam));
+            const idx = data.addresses.findIndex(
+              (a) =>
+                a.street === targetAddr.street &&
+                a.municipality === targetAddr.municipality &&
+                a.province === targetAddr.province &&
+                a.postalCode === targetAddr.postalCode
+            );
+            if (idx !== -1) {
+              setSelectedIndex(idx);
+            }
+          } catch (e) {
+            console.error("Failed to parse addressId param:", e);
+          }
+        }
       } catch (e: any) {
         setError(e?.message || "Failed to load customer");
       } finally {
@@ -95,7 +116,7 @@ export default function NewWorkOrderFromCustomerPage() {
       }
     }
     loadCustomer();
-  }, [customerId]);
+  }, [customerId, searchParams]);
 
   // Search services from price book
   async function searchServices(q: string) {

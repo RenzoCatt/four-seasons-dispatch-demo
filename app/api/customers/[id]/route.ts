@@ -33,6 +33,7 @@ export async function GET(
     notes: customer.notes ?? customer.locations[0]?.notes ?? "",
     address: customer.locations[0]?.address ?? "",
     locationId: customer.locations[0]?.id ?? null,
+    createdAt: customer.createdAt.toISOString(),
     // Expanded fields
     firstName: customer.firstName,
     lastName: customer.lastName,
@@ -183,6 +184,7 @@ export async function PATCH(
     notes: refetched.notes ?? refetched.locations[0]?.notes ?? "",
     address: refetched.locations[0]?.address ?? "",
     locationId: refetched.locations[0]?.id ?? null,
+    createdAt: refetched.createdAt.toISOString(),
     // Expanded fields
     firstName: refetched.firstName,
     lastName: refetched.lastName,

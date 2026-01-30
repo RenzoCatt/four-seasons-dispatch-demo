@@ -245,7 +245,15 @@ function JobsPageContent() {
                     {w.assignedStartAt ? fmtDateTime(w.assignedStartAt) : ""}
                   </td>
 
-                  <td className="p-3">{t?.name ?? (w.assignedTechId ? "Assigned" : "")}</td>
+                  <td className="p-3">
+                    {t?.name ? (
+                      <span>{t.name}</span>
+                    ) : (
+                      <span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-600">
+                        Unassigned
+                      </span>
+                    )}
+                  </td>
 
                   <td className="p-3 text-right">
                     {typeof w.jobAmount === "number" ? `$${w.jobAmount.toFixed(2)}` : "$0.00"}

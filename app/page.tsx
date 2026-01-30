@@ -13,6 +13,9 @@ export default function DashboardPage() {
 
         <ul className="list-disc pl-5 text-sm text-gray-700 space-y-2">
           <li>
+            <strong>Customer page major overhaul:</strong>New design for customer landing page, added per customer job and invoice tabs, new customer edit page.
+          </li>
+          <li>
             <strong>Dispatch page major overhaul:</strong> Weekly grid view with drag-and-drop scheduling, completed jobs crossed off, click-to-view job modal with customer info and line items.
           </li>
           <li>

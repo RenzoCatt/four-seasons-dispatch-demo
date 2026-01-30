@@ -3,9 +3,15 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    // Support optional customerId query param for filtering
+    const { searchParams } = new URL(req.url);
+    const customerId = searchParams.get("customerId");
+    const where = customerId ? { customerId } : undefined;
+
     const invoices = await prisma.invoice.findMany({
+      where,
       select: {
         id: true,
         invoiceNumber: true,
@@ -14,6 +20,12 @@ export async function GET() {
         tax: true,
         total: true,
         createdAt: true,
+        workOrderId: true,
+        workOrder: {
+          select: {
+            jobNumber: true,
+          },
+        },
         customer: {
           select: {
             name: true,
@@ -32,6 +44,8 @@ export async function GET() {
         tax: inv.tax,
         total: inv.total,
         createdAt: inv.createdAt.toISOString(),
+        workOrderId: inv.workOrderId,
+        jobNumber: inv.workOrder?.jobNumber,
         customerName: inv.customer.name,
       }))
     );
